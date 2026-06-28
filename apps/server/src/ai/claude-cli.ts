@@ -62,10 +62,21 @@ export async function selfCheck(): Promise<{ ok: boolean; detail: string }> {
   return new Promise((resolve) => {
     const cp = nodeSpawn('claude', ['--version'], { shell: false })
     let out = ''
+    let settled = false
+    const settle = (r: { ok: boolean; detail: string }) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve(r)
+    }
+    const timer = setTimeout(() => {
+      cp.kill('SIGKILL')
+      settle({ ok: false, detail: 'claude CLI 响应超时' })
+    }, 5000)
     cp.stdout?.on('data', (d) => { out += d.toString() })
-    cp.on('error', () => resolve({ ok: false, detail: '未检测到 claude CLI,请安装并登录 Claude Code' }))
-    cp.on('close', (code) => code === 0
-      ? resolve({ ok: true, detail: out.trim() })
-      : resolve({ ok: false, detail: 'claude CLI 不可用' }))
+    cp.on('error', () => settle({ ok: false, detail: '未检测到 claude CLI,请安装并登录 Claude Code' }))
+    cp.on('close', (code) => settle(code === 0
+      ? { ok: true, detail: out.trim() }
+      : { ok: false, detail: 'claude CLI 不可用' }))
   })
 }

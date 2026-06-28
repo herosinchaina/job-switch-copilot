@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
-import { ClaudeCliProvider, completeJson } from './claude-cli'
+import { ClaudeCliProvider, completeJson, selfCheck } from './claude-cli'
 import { z } from 'zod'
 
 function makeCp(payload: string, code = 0) {
@@ -27,5 +27,11 @@ describe('ClaudeCliProvider', () => {
     const r = await completeJson(p, z.object({ v: z.number() }), { system:'s', prompt:'p' })
     expect(r).toEqual({ v: 1 })
     expect(spawnFn).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('selfCheck', () => {
+  it('is exported as a function', () => {
+    expect(typeof selfCheck).toBe('function')
   })
 })
