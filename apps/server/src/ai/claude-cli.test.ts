@@ -13,7 +13,7 @@ function makeCp(payload: string, code = 0) {
 
 describe('ClaudeCliProvider', () => {
   it('uses shell:false and feeds prompt via stdin', async () => {
-    const spawnFn = vi.fn(() => makeCp('hello'))
+    const spawnFn = vi.fn((_cmd: string, _args: string[], _opts: any) => makeCp('hello'))
     const p = new ClaudeCliProvider({ spawnFn: spawnFn as any })
     const out = await p.complete({ system: 'sys', prompt: 'hi; rm -rf /' })
     expect(out).toBe('hello')
