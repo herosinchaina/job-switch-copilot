@@ -2,6 +2,8 @@ node_modules/
 dist/
 *.log
 .DS_Store
-data/*.sqlite
+data/
+apps/server/data/
+*.sqlite
 .superpowers/
 .claude/
