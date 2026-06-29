@@ -3,7 +3,10 @@ import { api } from '../api'
 import type { StructuredResume } from '@aios/shared'
 import { StructuredEditor } from './StructuredEditor'
 
-export function ResumeUpload({ onConfirmed }: { onConfirmed: (versionId: number) => void }) {
+export function ResumeUpload({ onConfirmed, onDraft }: {
+  onConfirmed: (versionId: number) => void
+  onDraft?: (structured: StructuredResume) => void
+}) {
   const [versionId, setVersionId] = useState<number | null>(null)
   const [draft, setDraft] = useState<StructuredResume | null>(null)
   const [busy, setBusy] = useState(false)
@@ -17,7 +20,7 @@ export function ResumeUpload({ onConfirmed }: { onConfirmed: (versionId: number)
   async function confirm() {
     if (!versionId || !draft) return
     setBusy(true); setError('')
-    try { await api.updateVersion(versionId, draft); await api.confirmVersion(versionId); onConfirmed(versionId) }
+    try { await api.updateVersion(versionId, draft); await api.confirmVersion(versionId); onDraft?.(draft); onConfirmed(versionId) }
     catch (e: any) { setError(e.message) } finally { setBusy(false) }
   }
   return (
