@@ -22,8 +22,9 @@ function ScoreRing({ score }: { score: number }) {
   )
 }
 
-export function ResumeReview({ versionId, onBack, onOptimize }: {
+export function ResumeReview({ versionId, onBack, onOptimize, onGenerateKit }: {
   versionId: number; onBack: () => void; onOptimize: (s: Review['suggestions']) => void
+  onGenerateKit?: (jobDescriptionId: number | null) => void
 }) {
   const [jdId, setJdId] = useState<number | null>(null)
   const [started, setStarted] = useState(false)
@@ -148,7 +149,12 @@ export function ResumeReview({ versionId, onBack, onOptimize }: {
               </ul>
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div className="flex justify-end gap-2 pt-1">
+              {onGenerateKit && (
+                <Button variant="secondary" onClick={() => onGenerateKit(jdId)}>
+                  生成面试材料
+                </Button>
+              )}
               <Button variant="success" onClick={() => onOptimize(r.suggestions)}>
                 <Sparkles size={15} /> 根据建议生成优化版
               </Button>

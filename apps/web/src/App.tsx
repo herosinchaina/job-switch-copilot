@@ -4,6 +4,7 @@ import { CliBanner } from './components/CliBanner'
 import { ResumeUpload } from './pages/ResumeUpload'
 import { ResumeReview } from './pages/ResumeReview'
 import { ResumeCompare } from './pages/ResumeCompare'
+import { InterviewKit } from './pages/InterviewKit'
 import { Dashboard } from './pages/Dashboard'
 import { LayoutDashboard, FileText, Download, Moon, Sun, Sparkles, ChevronLeft } from 'lucide-react'
 import type { Review, StructuredResume } from '@aios/shared'
@@ -14,11 +15,13 @@ export default function App() {
   const [confirmedVersion, setConfirmedVersion] = useState<number | null>(null)
   const [confirmedStructured, setConfirmedStructured] = useState<StructuredResume | null>(null)
   const [optimizeSuggestions, setOptimizeSuggestions] = useState<Review['suggestions'] | null>(null)
+  const [kitFor, setKitFor] = useState<{ versionId: number; jdId: number | null } | null>(null)
 
   function resetFlow() {
     setConfirmedVersion(null)
     setConfirmedStructured(null)
     setOptimizeSuggestions(null)
+    setKitFor(null)
   }
 
   const navItems = [
@@ -97,6 +100,16 @@ export default function App() {
         </div>
       )
     }
-    return <ResumeReview versionId={confirmedVersion} onBack={resetFlow} onOptimize={setOptimizeSuggestions} />
+    if (kitFor) {
+      return <InterviewKit versionId={kitFor.versionId} jobDescriptionId={kitFor.jdId} onBack={() => setKitFor(null)} />
+    }
+    return (
+      <ResumeReview
+        versionId={confirmedVersion}
+        onBack={resetFlow}
+        onOptimize={setOptimizeSuggestions}
+        onGenerateKit={(jdId) => setKitFor({ versionId: confirmedVersion!, jdId })}
+      />
+    )
   }
 }

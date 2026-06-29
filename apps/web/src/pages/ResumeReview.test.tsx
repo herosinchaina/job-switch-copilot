@@ -35,4 +35,17 @@ describe('ResumeReview', () => {
     await findByText(/匹配缺口|岗位匹配/)
     expect(getByText(/k8s/)).toBeTruthy()
   })
+
+  it('calls onGenerateKit with the bound jd when clicking the kit button', async () => {
+    const withGap = { hr:{ perspective:'hr', overallScore:70, dimensionScores:[{dimension:'layout',score:70,comment:''}], suggestions:[] },
+      interviewer:{ perspective:'interviewer', overallScore:70, dimensionScores:[{dimension:'layout',score:70,comment:''}], suggestions:[] } }
+    vi.spyOn(api,'review').mockResolvedValue(withGap as any)
+    const onGenerateKit = vi.fn()
+    const { getByText, findByText } = render(
+      <ResumeReview versionId={2} onBack={()=>{}} onOptimize={()=>{}} onGenerateKit={onGenerateKit} />)
+    fireEvent.click(getByText(/开始诊断/))
+    await findByText(/总分|70/)
+    fireEvent.click(getByText(/生成面试材料/))
+    expect(onGenerateKit).toHaveBeenCalledWith(null)  // 本用例未选 JD
+  })
 })
