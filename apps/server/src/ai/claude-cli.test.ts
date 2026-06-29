@@ -33,7 +33,7 @@ describe('ClaudeCliProvider', () => {
 describe('ClaudeCliProvider sessions', () => {
   it('uses --session-id on first turn and --resume after, shell:false, stdin prompt', async () => {
     const calls: string[][] = []
-    const spawnFn = vi.fn((_cmd: string, args: string[]) => { calls.push(args); return makeCp('hello') })
+    const spawnFn = vi.fn((_cmd: string, args: string[], _opts: any) => { calls.push(args); return makeCp('hello') })
     const p = new ClaudeCliProvider({ spawnFn: spawnFn as any })
     const sid = p.startSession!()
     expect(typeof sid).toBe('string')
