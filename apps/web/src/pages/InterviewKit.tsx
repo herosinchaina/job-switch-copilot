@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { Card, Button } from '../components/ui'
+import { Card } from '../components/ui'
 import { ChevronLeft, Copy } from 'lucide-react'
 import type { InterviewKit as Kit } from '@aios/shared'
 
