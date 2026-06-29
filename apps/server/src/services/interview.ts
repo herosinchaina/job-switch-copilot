@@ -5,10 +5,12 @@ import type { AiProvider } from '../ai/provider'
 import type { StructuredResume, JobDescription, RoundType } from '@aios/shared'
 import { completeJson, completeJsonSession } from '../ai/claude-cli'
 import { InterviewStepSchema, type InterviewStep } from '@aios/shared'
+import { InterviewReportSchema, type InterviewReport } from '@aios/shared'
 
 const dir = dirname(fileURLToPath(import.meta.url))
 const SYSTEM = readFileSync(join(dir, '../prompts/interview-system.txt'), 'utf8')
 const STEP = readFileSync(join(dir, '../prompts/interview-step.txt'), 'utf8')
+const REPORT = readFileSync(join(dir, '../prompts/interview-report.txt'), 'utf8')
 
 const ROUND_STYLE: Record<RoundType, string> = {
   tech: '本轮是技术面:聚焦技术深度、项目实现细节、原理与权衡。',
@@ -49,4 +51,12 @@ export async function answerTurn(ai: AiProvider, ctx: {
   const hist = ctx.history.map((h, i) => `Q${i}: ${h.question}\nA${i}: ${h.answer}`).join('\n')
   const prompt = `候选人简历:\n${JSON.stringify(ctx.resume)}${jdPart}\n\n面试问答记录:\n${hist}\n\n${sessionPrompt}`
   return completeJson(ai, InterviewStepSchema, { system: `${buildSystemPrompt(ctx.roundType)}\n\n${STEP}`, prompt })
+}
+
+export function generateReport(ai: AiProvider, input: {
+  roundType: RoundType; turns: Array<{ question: string; answer: string; score: number }>
+}): Promise<InterviewReport> {
+  const body = input.turns.map((t, i) => `Q${i}: ${t.question}\nA${i}: ${t.answer}\n本轮评分: ${t.score}`).join('\n\n')
+  const prompt = `面试问答记录与逐轮评分:\n${body}\n\n请生成面试报告。`
+  return completeJson(ai, InterviewReportSchema, { system: `${buildSystemPrompt(input.roundType)}\n\n${REPORT}`, prompt })
 }

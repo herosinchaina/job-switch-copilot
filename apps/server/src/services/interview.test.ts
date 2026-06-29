@@ -65,3 +65,16 @@ describe('answerTurn', () => {
     expect(step.nextQuestion).toBe('再展开讲讲')
   })
 })
+
+import { generateReport } from './interview'
+const reportOut = JSON.stringify({ overallScore:74, dimensions:[{name:'专业性',score:80,comment:'扎实'}],
+  bestTurn:{question:'q0',why:'答得好'}, worstTurn:null, weaknesses:['系统设计'], nextSteps:['多练系统设计'] })
+
+describe('generateReport', () => {
+  it('returns a validated report', async () => {
+    const ai: AiProvider = { async complete(){ return reportOut }, async *stream(){ yield reportOut } }
+    const r = await generateReport(ai, { roundType:'tech', turns:[{question:'q0',answer:'a0',score:80}] })
+    expect(r.overallScore).toBe(74)
+    expect(r.dimensions[0].name).toBe('专业性')
+  })
+})
