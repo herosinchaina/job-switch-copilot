@@ -26,4 +26,27 @@ describe('reviewResume', () => {
     const r = await reviewResume(fakeAi(reviewJdOut), sample as any, 'hr', sampleJd as any)
     expect(r.dimensionScores.some(d => d.dimension === 'jobMatch')).toBe(true)
   })
+
+  it('jd 分支选择 JD-aware system prompt 并注入 JD', async () => {
+    let captured: { system: string; prompt: string } | null = null
+    const captureAi: AiProvider = {
+      async complete(o) { captured = { system: o.system, prompt: o.prompt }; return reviewJdOut },
+      async *stream() { yield reviewJdOut },
+    }
+    await reviewResume(captureAi, sample as any, 'hr', sampleJd as any)
+    expect(captured).not.toBeNull()
+    expect(captured!.system).toContain('JD 关键词在简历中') // 证明选中 review-with-jd.txt
+    expect(captured!.prompt).toContain('JD JSON') // 证明 JD 被注入 prompt
+  })
+
+  it('无 jd 分支选择普通 review.txt（system 不含 JD 提示语）', async () => {
+    let captured: { system: string; prompt: string } | null = null
+    const captureAi: AiProvider = {
+      async complete(o) { captured = { system: o.system, prompt: o.prompt }; return reviewOut },
+      async *stream() { yield reviewOut },
+    }
+    await reviewResume(captureAi, sample as any, 'hr')
+    expect(captured).not.toBeNull()
+    expect(captured!.system).not.toContain('JD 关键词在简历中') // 证明走的是 review.txt 路径
+  })
 })
