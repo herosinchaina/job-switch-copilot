@@ -16,7 +16,7 @@ export function interviewsRouter(db: DatabaseSync, ai: AiProvider) {
       if (v.status !== 'confirmed') throw new HttpError(409, '请先确认校对后的简历再开始面试')
       const roundType = req.body.roundType as RoundType
       if (!ROUND_TYPES.includes(roundType)) throw new HttpError(400, 'roundType 非法')
-      const maxRounds = Number(req.body.maxRounds) || 6
+      const maxRounds = Math.min(Math.max(Math.trunc(Number(req.body.maxRounds)) || 6, 1), 12)
       let jd, jdId: number | null = null, role = roundType === 'tech' ? '技术岗' : '通用岗'
       const jdRaw = req.body.jobDescriptionId
       if (jdRaw !== undefined && jdRaw !== null) {

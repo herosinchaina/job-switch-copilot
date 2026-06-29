@@ -149,6 +149,14 @@ describe('interview routes', () => {
     const got = await request(app).get(`/api/interviews/${sid}`)
     expect(got.body.session.status).toBe('finished'); expect(got.body.turns.length).toBeGreaterThanOrEqual(2)
   })
+  it('clamps maxRounds to 12 when caller passes an out-of-range value', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, interviewAi())
+    const vid = await confirmedVersion(app)
+    const start = await request(app).post('/api/interviews').send({ versionId: vid, roundType:'tech', maxRounds:1000 })
+    expect(start.status).toBe(200)
+    const got = await request(app).get(`/api/interviews/${start.body.sessionId}`)
+    expect(got.body.session.maxRounds).toBe(12)
+  })
   it('404 on unknown jobDescriptionId', async () => {
     const db = openDb(':memory:'); const app = createApp(db, interviewAi())
     const vid = await confirmedVersion(app)
