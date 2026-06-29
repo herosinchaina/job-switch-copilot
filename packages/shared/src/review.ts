@@ -1,5 +1,7 @@
 import { z } from 'zod'
-export const DIMENSIONS = ['layout','professionalism','star','quantification','techDepth'] as const
+export const DIMENSIONS_BASE = ['layout','professionalism','star','quantification','techDepth'] as const
+export const DIMENSIONS_JD = ['jobMatch','ats','keywordCoverage'] as const
+export const DIMENSIONS = [...DIMENSIONS_BASE, ...DIMENSIONS_JD] as const
 export type DimensionKey = typeof DIMENSIONS[number]
 export const ReviewSchema = z.object({
   perspective: z.enum(['hr','interviewer']),
