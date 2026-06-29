@@ -1,0 +1,10 @@
+{
+  "name": "ai-interview-os",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/server & npm run dev --workspace=apps/web",
+    "test": "vitest run"
+  },
+  "devDependencies": { "typescript": "^5.5.0", "vitest": "^2.0.0" }
+}
