@@ -64,3 +64,39 @@ describe('reviews with jd', () => {
     expect(res.status).toBe(404)
   })
 })
+
+function kitAi(): AiProvider {
+  const parsed = JSON.stringify({ basics:{name:'A',title:'T',contact:'c',summary:''}, education:[],work:[],projects:[],skills:[],awards:[] })
+  const kit = JSON.stringify({ selfIntro:{ short:'30秒', standard:'1-2分钟' }, projectPitches:[] })
+  return {
+    async complete(o) {
+      if (o.system.includes('简历解析器')) return parsed   // parse.txt
+      return kit                                          // kit.txt / kit-with-jd.txt
+    },
+    async *stream(o){ yield await this.complete(o) },
+  }
+}
+
+describe('kit routes', () => {
+  it('rejects kit before confirm with 409', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, kitAi())
+    const up = await request(app).post('/api/resumes').attach('file', Buffer.from('# r'), 'r.md')
+    const res = await request(app).post('/api/kits').send({ versionId: up.body.versionId })
+    expect(res.status).toBe(409)
+  })
+  it('generates a kit after confirm', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, kitAi())
+    const up = await request(app).post('/api/resumes').attach('file', Buffer.from('# r'), 'r.md')
+    await request(app).post(`/api/resumes/versions/${up.body.versionId}/confirm`)
+    const res = await request(app).post('/api/kits').send({ versionId: up.body.versionId })
+    expect(res.status).toBe(200)
+    expect(res.body.kit.selfIntro.short).toBe('30秒')
+  })
+  it('404 on unknown jobDescriptionId', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, kitAi())
+    const up = await request(app).post('/api/resumes').attach('file', Buffer.from('# r'), 'r.md')
+    await request(app).post(`/api/resumes/versions/${up.body.versionId}/confirm`)
+    const res = await request(app).post('/api/kits').send({ versionId: up.body.versionId, jobDescriptionId: 999 })
+    expect(res.status).toBe(404)
+  })
+})

@@ -9,6 +9,7 @@ import { resumesRouter } from './routes/resumes'
 import { reviewsRouter } from './routes/reviews'
 import { optimizeRouter } from './routes/optimize'
 import { jdsRouter } from './routes/jds'
+import { kitsRouter } from './routes/kits'
 import { exportRouter } from './routes/export'
 import { errorHandler } from './middleware/error'
 
@@ -20,6 +21,7 @@ export function createApp(db: DatabaseSync, ai: AiProvider): Express {
   app.use('/api', reviewsRouter(db, ai))
   app.use('/api', optimizeRouter(db, ai))
   app.use('/api', jdsRouter(db, ai))
+  app.use('/api', kitsRouter(db, ai))
   app.use('/api', exportRouter(db))
   app.use(errorHandler)
   return app
