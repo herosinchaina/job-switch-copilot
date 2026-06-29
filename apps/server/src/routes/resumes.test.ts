@@ -155,4 +155,39 @@ describe('interview routes', () => {
     const res = await request(app).post('/api/interviews').send({ versionId: vid, roundType:'tech', jobDescriptionId: 999 })
     expect(res.status).toBe(404)
   })
+  it('hard-stops at maxRounds even when AI keeps returning nextQuestion', async () => {
+    // AI 永远返回非空 nextQuestion(从不主动收口),验证路由的轮次上限硬停止
+    const neverEndingAi = (() => {
+      const parsed = JSON.stringify({ basics:{name:'A',title:'T',contact:'c',summary:''}, education:[],work:[],projects:[],skills:[],awards:[] })
+      const firstQ = '请做一下自我介绍。'
+      const stepGo = JSON.stringify({ feedback:{ score:70, highlights:[], gaps:[], better:'' }, nextQuestion:'继续追问' })
+      const report = JSON.stringify({ overallScore:70, dimensions:[{name:'专业性',score:70,comment:'ok'}], bestTurn:null, worstTurn:null, weaknesses:[], nextSteps:[] })
+      const handle = (system: string, prompt: string) => {
+        if (system.includes('简历解析器')) return parsed
+        if (prompt.includes('生成面试报告')) return report
+        if (prompt.includes('请作为面试官提出第一个问题')) return firstQ
+        if (prompt.includes('请评价本次回答')) return stepGo  // 永不返回 null
+        return firstQ
+      }
+      return {
+        async complete(o:any){ return handle(o.system ?? '', o.prompt) },
+        async *stream(o:any){ yield this.complete(o) },
+        startSession(){ return 'cli-sess' },
+        async continueSession(_sid:string, o:any){ return handle(o.system ?? '', o.prompt) },
+      } as any
+    })()
+    const db = openDb(':memory:'); const app = createApp(db, neverEndingAi)
+    const vid = await confirmedVersion(app)
+    const start = await request(app).post('/api/interviews').send({ versionId: vid, roundType:'tech', maxRounds:2 })
+    expect(start.status).toBe(200)
+    const sid = start.body.sessionId
+    // turnIndex 0 → 0+1 < 2,继续
+    const a1 = await request(app).post(`/api/interviews/${sid}/answer`).send({ answer:'回答1' })
+    expect(a1.body.finished).toBe(false); expect(a1.body.nextQuestion).toBeTruthy()
+    // turnIndex 1 → 1+1 >= 2,即便 AI 仍返回 nextQuestion,路由也必须强制结束并出报告
+    const a2 = await request(app).post(`/api/interviews/${sid}/answer`).send({ answer:'回答2' })
+    expect(a2.body.finished).toBe(true)
+    expect(a2.body.report).toBeTruthy()
+    expect(a2.body.report.overallScore).toBe(70)
+  })
 })
