@@ -1,4 +1,4 @@
-import type { StructuredResume, Review, JobDescription } from '@aios/shared'
+import type { StructuredResume, Review, JobDescription, InterviewKit } from '@aios/shared'
 async function j<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts)
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
@@ -21,4 +21,7 @@ export const api = {
       '/api/reviews', json(jobDescriptionId == null ? { versionId } : { versionId, jobDescriptionId })),
   optimize: (versionId: number, suggestions: Review['suggestions']) =>
     j<{versionId:number;structured:StructuredResume}>('/api/optimize', json({ versionId, suggestions })),
+  generateKit: (versionId: number, jobDescriptionId?: number) =>
+    j<{id:number; kit:InterviewKit}>('/api/kits',
+      json(jobDescriptionId == null ? { versionId } : { versionId, jobDescriptionId })),
 }
