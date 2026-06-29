@@ -16,8 +16,23 @@ beforeEach(() => { vi.spyOn(api,'review').mockResolvedValue({ hr: mk('hr',80), i
 describe('ResumeReview', () => {
   it('renders both perspectives and highlights a clicked suggestion', async () => {
     const { getByText } = render(<ResumeReview versionId={2} onBack={()=>{}} onOptimize={()=>{}} />)
+    fireEvent.click(getByText(/开始诊断/))
     await waitFor(() => getByText(/80/))
     fireEvent.click(getByText(/缺量化/))
     await waitFor(() => expect(getByText(/work\[0\]/)).toBeTruthy())
+  })
+
+  it('shows gap card when review returns gap', async () => {
+    const withGap = {
+      hr: { perspective:'hr', overallScore:72,
+        dimensionScores:[{dimension:'jobMatch',score:66,comment:''}], suggestions:[] },
+      interviewer: { perspective:'interviewer', overallScore:70, dimensionScores:[{dimension:'jobMatch',score:60,comment:''}], suggestions:[] },
+      gap: { matchScore:80, missingKeywords:['k8s'], weakRequirements:['分布式经验'], coveredHighlights:['Go'] },
+    }
+    vi.spyOn(api,'review').mockResolvedValue(withGap as any)
+    const { getByText, findByText } = render(<ResumeReview versionId={2} onBack={()=>{}} onOptimize={()=>{}} />)
+    fireEvent.click(getByText(/开始诊断/))
+    await findByText(/匹配缺口|岗位匹配/)
+    expect(getByText(/k8s/)).toBeTruthy()
   })
 })
