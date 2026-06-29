@@ -1,4 +1,4 @@
-import type { StructuredResume, Review } from '@aios/shared'
+import type { StructuredResume, Review, JobDescription } from '@aios/shared'
 async function j<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts)
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
@@ -13,7 +13,12 @@ export const api = {
   updateVersion: (id: number, structured: StructuredResume) =>
     j<{ok:true}>(`/api/resumes/versions/${id}`, { ...json({ structured }), method:'PUT' }),
   confirmVersion: (id: number) => j<{ok:true}>(`/api/resumes/versions/${id}/confirm`, { method:'POST' }),
-  review: (versionId: number) => j<{hr:Review;interviewer:Review}>('/api/reviews', json({ versionId })),
+  listJds: () => j<{id:number;title:string;company:string;createdAt:string}[]>('/api/jds'),
+  createJd: (input: { title:string; company?:string; rawText:string }) =>
+    j<{id:number; structured:JobDescription}>('/api/jds', json(input)),
+  review: (versionId: number, jobDescriptionId?: number) =>
+    j<{hr:Review;interviewer:Review;gap?:import('@aios/shared').GapAnalysis}>(
+      '/api/reviews', json(jobDescriptionId == null ? { versionId } : { versionId, jobDescriptionId })),
   optimize: (versionId: number, suggestions: Review['suggestions']) =>
     j<{versionId:number;structured:StructuredResume}>('/api/optimize', json({ versionId, suggestions })),
 }
