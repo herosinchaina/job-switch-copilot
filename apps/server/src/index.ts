@@ -1,6 +1,7 @@
 import express, { type Express } from 'express'
 import { fileURLToPath } from 'node:url'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { mkdirSync } from 'node:fs'
 import type { DatabaseSync } from 'node:sqlite'
 import type { AiProvider } from './ai/provider'
 import { healthRouter } from './routes/health'
@@ -26,7 +27,10 @@ export function createApp(db: DatabaseSync, ai: AiProvider): Express {
 async function main() {
   const { openDb } = await import('./db/repo')
   const { getAi } = await import('./ai/claude-cli')
-  const db = openDb('apps/server/data/aios.sqlite')
+  // 数据库路径相对于本模块解析,避免依赖启动时的工作目录;确保目录存在。
+  const dataDir = resolve(dirname(fileURLToPath(import.meta.url)), '../data')
+  mkdirSync(dataDir, { recursive: true })
+  const db = openDb(resolve(dataDir, 'aios.sqlite'))
   createApp(db, getAi()).listen(5179, '127.0.0.1', () => console.log('server on http://127.0.0.1:5179'))
 }
 
