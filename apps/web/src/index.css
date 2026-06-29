@@ -1,1 +1,57 @@
-@tailwind base; @tailwind components; @tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ──────────────────────────────────────────────
+   Professional SaaS, dark-first. Slate neutrals + indigo accent.
+   Light/dark pairs designed together; all text pairs >= 4.5:1.    */
+:root {
+  --bg: 250 250 252;
+  --surface: 255 255 255;
+  --surface-2: 248 250 252;
+  --border: 226 232 240;
+  --text: 15 23 42;
+  --text-muted: 100 116 139;
+  --text-faint: 148 163 184;
+  --accent: 79 70 229;
+  --accent-hover: 67 56 202;
+  --accent-soft: 238 242 255;
+  --success: 5 150 105;
+  --danger: 220 38 38;
+  --warn: 217 119 6;
+  --ring: 99 102 241;
+}
+.dark {
+  --bg: 9 11 18;
+  --surface: 17 21 31;
+  --surface-2: 24 29 41;
+  --border: 38 45 60;
+  --text: 226 232 240;
+  --text-muted: 148 163 184;
+  --text-faint: 100 116 139;
+  --accent: 129 140 248;
+  --accent-hover: 165 180 252;
+  --accent-soft: 30 31 56;
+  --success: 52 211 153;
+  --danger: 248 113 113;
+  --warn: 251 191 36;
+  --ring: 129 140 248;
+}
+
+html { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+body { background: rgb(var(--bg)); color: rgb(var(--text)); }
+
+* { transition: background-color .2s ease, border-color .2s ease, color .15s ease; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton { position: relative; overflow: hidden; background: rgb(var(--surface-2)); }
+.skeleton::after {
+  content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(var(--border) / 0.55), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; } }
