@@ -1,4 +1,4 @@
-import type { StructuredResume, Review, JobDescription, InterviewKit } from '@aios/shared'
+import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport } from '@aios/shared'
 async function j<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts)
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
@@ -24,4 +24,11 @@ export const api = {
   generateKit: (versionId: number, jobDescriptionId?: number) =>
     j<{id:number; kit:InterviewKit}>('/api/kits',
       json(jobDescriptionId == null ? { versionId } : { versionId, jobDescriptionId })),
+  startInterview: (input: { versionId:number; jobDescriptionId?:number; roundType:RoundType; maxRounds?:number }) =>
+    j<{sessionId:number; turnIndex:number; question:string}>('/api/interviews', json(input)),
+  answerInterview: (sessionId: number, answer: string) =>
+    j<{feedback:TurnFeedback|null; nextQuestion:string|null; turnIndex:number; finished:boolean; report?:InterviewReport}>(
+      `/api/interviews/${sessionId}/answer`, json({ answer })),
+  getInterview: (sessionId: number) =>
+    j<{session:any; turns:any[]}>(`/api/interviews/${sessionId}`),
 }
