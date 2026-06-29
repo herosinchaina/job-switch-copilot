@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
 import { openDb, createResume, createVersion, confirmVersion, getVersion, createReview, listResumes, transaction, createJd, getJd, listJds, getReviewRow } from './repo'
 import { createKit, getKit } from './repo'
+import { createSession, getSession, finishSession, createTurn, answerTurnRow, listTurns } from './repo'
 
 let db: DatabaseSync
 beforeEach(() => { db = openDb(':memory:') })
@@ -74,5 +75,33 @@ describe('interview_kits repo', () => {
     const got = getKit(db, id)!
     expect(got.kit.selfIntro.short).toBe('a')
     expect(got.jobDescriptionId).toBeNull()
+  })
+})
+
+describe('interview repo', () => {
+  function setup() {
+    const db = openDb(':memory:')
+    const rid = createResume(db, { title:'r', sourceFormat:'md', rawText:'x' })
+    const sample = { basics:{name:'A',title:'T',contact:'c',summary:''}, education:[],work:[],projects:[],skills:[],awards:[] }
+    const vid = createVersion(db, { resumeId:rid, kind:'original', parentVersionId:null, structured:sample, status:'confirmed' })
+    return { db, vid }
+  }
+  it('round-trips a session + turns and computes is_weak', () => {
+    const { db, vid } = setup()
+    const sid = createSession(db, { resumeVersionId: vid, jobDescriptionId: null, cliSessionId: 'uuid-1', role:'后端', roundType:'tech', maxRounds:6 })
+    const s = getSession(db, sid)!
+    expect(s.status).toBe('active'); expect(s.cliSessionId).toBe('uuid-1'); expect(s.report).toBeNull()
+    const t0 = createTurn(db, { sessionId: sid, turnIndex:0, question:'介绍项目' })
+    answerTurnRow(db, t0, { answer:'我做了X', score:50, feedback:{ score:50, highlights:[], gaps:['浅'], better:'深入' } })
+    const turns = listTurns(db, sid)
+    expect(turns[0].answer).toBe('我做了X'); expect(turns[0].isWeak).toBe(true)  // 50 < 60
+  })
+  it('finishSession writes report and flips status', () => {
+    const { db, vid } = setup()
+    const sid = createSession(db, { resumeVersionId: vid, jobDescriptionId: null, cliSessionId: null, role:'后端', roundType:'hr', maxRounds:6 })
+    const report = { overallScore:70, dimensions:[], bestTurn:null, worstTurn:null, weaknesses:[], nextSteps:[] }
+    finishSession(db, sid, report)
+    const s = getSession(db, sid)!
+    expect(s.status).toBe('finished'); expect(s.report!.overallScore).toBe(70)
   })
 })

@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { migrate } from './connection'
-import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit } from '@aios/shared'
+import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType } from '@aios/shared'
 
 export function openDb(file: string): DatabaseSync {
   const db = new DatabaseSync(file); db.exec('PRAGMA foreign_keys = ON'); migrate(db); return db
@@ -56,7 +56,9 @@ export function exportAll(db: DatabaseSync) {
     versions: db.prepare('SELECT * FROM resume_versions').all(),
     reviews: db.prepare('SELECT * FROM reviews').all(),
     jobDescriptions: db.prepare('SELECT * FROM job_descriptions').all(),
-    interviewKits: db.prepare('SELECT * FROM interview_kits').all() }
+    interviewKits: db.prepare('SELECT * FROM interview_kits').all(),
+    interviewSessions: db.prepare('SELECT * FROM interview_sessions').all(),
+    interviewTurns: db.prepare('SELECT * FROM interview_turns').all() }
 }
 export function createKit(db: DatabaseSync, k: { resumeVersionId:number; jobDescriptionId:number|null; kit:InterviewKit }): number {
   return Number(db.prepare('INSERT INTO interview_kits (resume_version_id,job_description_id,kit_json) VALUES (?,?,?)')
@@ -72,4 +74,33 @@ export function transaction<T>(db: DatabaseSync, fn: () => T): T {
   db.exec('BEGIN')
   try { const r = fn(); db.exec('COMMIT'); return r }
   catch (e) { db.exec('ROLLBACK'); throw e }
+}
+export function createSession(db: DatabaseSync, s: { resumeVersionId:number; jobDescriptionId:number|null; cliSessionId:string|null; role:string; roundType:RoundType; maxRounds:number }): number {
+  return Number(db.prepare('INSERT INTO interview_sessions (resume_version_id,job_description_id,cli_session_id,role,round_type,max_rounds) VALUES (?,?,?,?,?,?)')
+    .run(s.resumeVersionId, s.jobDescriptionId, s.cliSessionId, s.role, s.roundType, s.maxRounds).lastInsertRowid)
+}
+export function getSession(db: DatabaseSync, id: number) {
+  const row = db.prepare('SELECT * FROM interview_sessions WHERE id=?').get(id) as any
+  if (!row) return undefined
+  return { id: row.id, resumeVersionId: row.resume_version_id, jobDescriptionId: row.job_description_id ?? null,
+    cliSessionId: row.cli_session_id ?? null, role: row.role, roundType: row.round_type as RoundType,
+    maxRounds: row.max_rounds, status: row.status as 'active'|'finished',
+    report: row.report_json ? InterviewReportSchema.parse(JSON.parse(row.report_json)) : null }
+}
+export function finishSession(db: DatabaseSync, id: number, report: InterviewReport): void {
+  db.prepare("UPDATE interview_sessions SET status='finished', report_json=? WHERE id=?").run(JSON.stringify(report), id)
+}
+export function createTurn(db: DatabaseSync, t: { sessionId:number; turnIndex:number; question:string }): number {
+  return Number(db.prepare('INSERT INTO interview_turns (session_id,turn_index,question) VALUES (?,?,?)')
+    .run(t.sessionId, t.turnIndex, t.question).lastInsertRowid)
+}
+export function answerTurnRow(db: DatabaseSync, turnId: number, a: { answer:string; score:number; feedback:TurnFeedback }): void {
+  db.prepare('UPDATE interview_turns SET answer=?, score=?, feedback_json=?, is_weak=? WHERE id=?')
+    .run(a.answer, a.score, JSON.stringify(a.feedback), a.score < 60 ? 1 : 0, turnId)
+}
+export function listTurns(db: DatabaseSync, sessionId: number) {
+  const rows = db.prepare('SELECT * FROM interview_turns WHERE session_id=? ORDER BY turn_index').all(sessionId) as any[]
+  return rows.map(r => ({ id: r.id, turnIndex: r.turn_index, question: r.question, answer: r.answer ?? null,
+    score: r.score ?? null, feedback: r.feedback_json ? TurnFeedbackSchema.parse(JSON.parse(r.feedback_json)) : null,
+    isWeak: !!r.is_weak }))
 }

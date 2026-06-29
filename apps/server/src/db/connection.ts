@@ -37,4 +37,27 @@ export function migrate(db: DatabaseSync): void {
   for (const col of ['job_description_id INTEGER', 'gap_json TEXT']) {
     try { db.exec(`ALTER TABLE reviews ADD COLUMN ${col}`) } catch { /* 已存在 */ }
   }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS interview_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      resume_version_id INTEGER NOT NULL REFERENCES resume_versions(id),
+      job_description_id INTEGER,
+      cli_session_id TEXT,
+      role TEXT NOT NULL,
+      round_type TEXT NOT NULL,
+      max_rounds INTEGER NOT NULL DEFAULT 6,
+      status TEXT NOT NULL DEFAULT 'active',
+      report_json TEXT,
+      created_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS interview_turns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL REFERENCES interview_sessions(id),
+      turn_index INTEGER NOT NULL,
+      question TEXT NOT NULL,
+      answer TEXT,
+      score INTEGER,
+      feedback_json TEXT,
+      is_weak INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')));
+  `)
 }
