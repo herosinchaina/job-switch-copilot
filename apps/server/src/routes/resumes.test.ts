@@ -22,4 +22,9 @@ describe('resume routes', () => {
     const res = await request(app).post('/api/reviews').send({ versionId: up.body.versionId })
     expect(res.status).toBe(409) // not confirmed
   })
+  it('rejects optimize before confirm', async () => {
+    const up = await request(app).post('/api/resumes').attach('file', Buffer.from('# r'), 'r.md')
+    const res = await request(app).post('/api/optimize').send({ versionId: up.body.versionId })
+    expect(res.status).toBe(409) // not confirmed
+  })
 })

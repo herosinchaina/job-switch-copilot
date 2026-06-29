@@ -34,3 +34,8 @@ export function exportAll(db: DatabaseSync) {
     versions: db.prepare('SELECT * FROM resume_versions').all(),
     reviews: db.prepare('SELECT * FROM reviews').all() }
 }
+export function transaction<T>(db: DatabaseSync, fn: () => T): T {
+  db.exec('BEGIN')
+  try { const r = fn(); db.exec('COMMIT'); return r }
+  catch (e) { db.exec('ROLLBACK'); throw e }
+}

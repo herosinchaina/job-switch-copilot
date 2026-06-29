@@ -11,6 +11,7 @@ export function optimizeRouter(db: DatabaseSync, ai: AiProvider) {
     try {
       const v = getVersion(db, Number(req.body.versionId))
       if (!v) throw new HttpError(404, '版本不存在')
+      if (v.status !== 'confirmed') throw new HttpError(409, '请先确认校对后的简历再优化')
       const structured = await optimizeResume(ai, v.structured, req.body.suggestions ?? [])
       const versionId = createVersion(db, { resumeId: v.resumeId, kind:'optimized', parentVersionId: v.id, structured, status:'confirmed' })
       res.json({ versionId, structured })
