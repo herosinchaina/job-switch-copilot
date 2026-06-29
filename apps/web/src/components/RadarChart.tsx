@@ -3,6 +3,7 @@ import type { DimensionKey } from '@aios/shared'
 
 const LABEL: Record<DimensionKey, string> = {
   layout: '排版', professionalism: '专业度', star: 'STAR', quantification: '量化', techDepth: '技术深度',
+  jobMatch: '岗位匹配', ats: 'ATS', keywordCoverage: '关键词覆盖',
 }
 
 export function RadarChart({ scores }: { scores: { dimension: DimensionKey; score: number }[] }) {
