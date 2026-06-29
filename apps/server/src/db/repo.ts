@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { migrate } from './connection'
-import { StructuredResumeSchema, JobDescriptionSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis } from '@aios/shared'
+import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit } from '@aios/shared'
 
 export function openDb(file: string): DatabaseSync {
   const db = new DatabaseSync(file); db.exec('PRAGMA foreign_keys = ON'); migrate(db); return db
@@ -55,7 +55,18 @@ export function exportAll(db: DatabaseSync) {
   return { resumes: db.prepare('SELECT * FROM resumes').all(),
     versions: db.prepare('SELECT * FROM resume_versions').all(),
     reviews: db.prepare('SELECT * FROM reviews').all(),
-    jobDescriptions: db.prepare('SELECT * FROM job_descriptions').all() }
+    jobDescriptions: db.prepare('SELECT * FROM job_descriptions').all(),
+    interviewKits: db.prepare('SELECT * FROM interview_kits').all() }
+}
+export function createKit(db: DatabaseSync, k: { resumeVersionId:number; jobDescriptionId:number|null; kit:InterviewKit }): number {
+  return Number(db.prepare('INSERT INTO interview_kits (resume_version_id,job_description_id,kit_json) VALUES (?,?,?)')
+    .run(k.resumeVersionId, k.jobDescriptionId, JSON.stringify(k.kit)).lastInsertRowid)
+}
+export function getKit(db: DatabaseSync, id: number) {
+  const row = db.prepare('SELECT id,resume_version_id,job_description_id,kit_json FROM interview_kits WHERE id=?').get(id) as any
+  if (!row) return undefined
+  return { id: row.id, resumeVersionId: row.resume_version_id, jobDescriptionId: row.job_description_id ?? null,
+    kit: InterviewKitSchema.parse(JSON.parse(row.kit_json)) }
 }
 export function transaction<T>(db: DatabaseSync, fn: () => T): T {
   db.exec('BEGIN')

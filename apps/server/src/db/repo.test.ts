@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
 import { openDb, createResume, createVersion, confirmVersion, getVersion, createReview, listResumes, transaction, createJd, getJd, listJds, getReviewRow } from './repo'
+import { createKit, getKit } from './repo'
 
 let db: DatabaseSync
 beforeEach(() => { db = openDb(':memory:') })
@@ -58,5 +59,20 @@ describe('jd repo', () => {
     const row = getReviewRow(db, reviewId)
     expect(row.jobDescriptionId).toBeNull()
     expect(row.gap).toBeNull()
+  })
+})
+
+describe('interview_kits repo', () => {
+  const kit = { selfIntro:{ short:'a', standard:'b' },
+    projectPitches:[{ projectName:'P', situation:'S', task:'T', action:'A', result:'R' }] }
+  it('round-trips a kit with jd', () => {
+    const db = openDb(':memory:')
+    const rid = createResume(db, { title:'r', sourceFormat:'md', rawText:'x' })
+    const sample = { basics:{name:'A',title:'T',contact:'c',summary:''}, education:[],work:[],projects:[],skills:[],awards:[] }
+    const vid = createVersion(db, { resumeId:rid, kind:'original', parentVersionId:null, structured:sample, status:'confirmed' })
+    const id = createKit(db, { resumeVersionId: vid, jobDescriptionId: null, kit })
+    const got = getKit(db, id)!
+    expect(got.kit.selfIntro.short).toBe('a')
+    expect(got.jobDescriptionId).toBeNull()
   })
 })

@@ -25,6 +25,14 @@ export function migrate(db: DatabaseSync): void {
       raw_text TEXT NOT NULL, structured_json TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now')));
   `)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS interview_kits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      resume_version_id INTEGER NOT NULL REFERENCES resume_versions(id),
+      job_description_id INTEGER,
+      kit_json TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')));
+  `)
   // 幂等加列:列已存在时 ALTER 会抛错,用 try/catch 吞掉。
   for (const col of ['job_description_id INTEGER', 'gap_json TEXT']) {
     try { db.exec(`ALTER TABLE reviews ADD COLUMN ${col}`) } catch { /* 已存在 */ }
