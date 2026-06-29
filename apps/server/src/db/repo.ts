@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { migrate } from './connection'
-import { StructuredResumeSchema, type StructuredResume, type Review } from '@aios/shared'
+import { StructuredResumeSchema, JobDescriptionSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis } from '@aios/shared'
 
 export function openDb(file: string): DatabaseSync {
   const db = new DatabaseSync(file); db.exec('PRAGMA foreign_keys = ON'); migrate(db); return db
@@ -22,9 +22,31 @@ export function getVersion(db: DatabaseSync, versionId: number) {
   return { id: row.id, resumeId: row.resume_id, kind: row.kind, status: row.status,
     structured: StructuredResumeSchema.parse(JSON.parse(row.structured_json)) }
 }
-export function createReview(db: DatabaseSync, versionId: number, rv: Review): number {
-  return Number(db.prepare('INSERT INTO reviews (resume_version_id,perspective,overall_score,dimension_scores_json,suggestions_json) VALUES (?,?,?,?,?)')
-    .run(versionId, rv.perspective, rv.overallScore, JSON.stringify(rv.dimensionScores), JSON.stringify(rv.suggestions)).lastInsertRowid)
+export function createReview(db: DatabaseSync, versionId: number, rv: Review,
+  opts?: { jobDescriptionId?: number | null; gap?: GapAnalysis | null }): number {
+  return Number(db.prepare(
+    'INSERT INTO reviews (resume_version_id,perspective,overall_score,dimension_scores_json,suggestions_json,job_description_id,gap_json) VALUES (?,?,?,?,?,?,?)')
+    .run(versionId, rv.perspective, rv.overallScore, JSON.stringify(rv.dimensionScores), JSON.stringify(rv.suggestions),
+      opts?.jobDescriptionId ?? null, opts?.gap ? JSON.stringify(opts.gap) : null).lastInsertRowid)
+}
+export function getReviewRow(db: DatabaseSync, id: number) {
+  const row = db.prepare('SELECT job_description_id, gap_json FROM reviews WHERE id=?').get(id) as any
+  return { jobDescriptionId: row.job_description_id ?? null,
+    gap: row.gap_json ? JSON.parse(row.gap_json) as GapAnalysis : null }
+}
+export function createJd(db: DatabaseSync, j: { title:string; company?:string; rawText:string; structured:JobDescription }): number {
+  return Number(db.prepare('INSERT INTO job_descriptions (title,company,raw_text,structured_json) VALUES (?,?,?,?)')
+    .run(j.title, j.company ?? '', j.rawText, JSON.stringify(j.structured)).lastInsertRowid)
+}
+export function getJd(db: DatabaseSync, id: number) {
+  const row = db.prepare('SELECT id,title,company,structured_json FROM job_descriptions WHERE id=?').get(id) as any
+  if (!row) return undefined
+  return { id: row.id, title: row.title, company: row.company,
+    structured: JobDescriptionSchema.parse(JSON.parse(row.structured_json)) }
+}
+export function listJds(db: DatabaseSync) {
+  return db.prepare('SELECT id,title,company,created_at as createdAt FROM job_descriptions ORDER BY id DESC').all() as
+    { id:number; title:string; company:string; createdAt:string }[]
 }
 export function listResumes(db: DatabaseSync) {
   return db.prepare('SELECT id,title,created_at as createdAt FROM resumes ORDER BY id DESC').all() as {id:number;title:string;createdAt:string}[]
@@ -32,7 +54,8 @@ export function listResumes(db: DatabaseSync) {
 export function exportAll(db: DatabaseSync) {
   return { resumes: db.prepare('SELECT * FROM resumes').all(),
     versions: db.prepare('SELECT * FROM resume_versions').all(),
-    reviews: db.prepare('SELECT * FROM reviews').all() }
+    reviews: db.prepare('SELECT * FROM reviews').all(),
+    jobDescriptions: db.prepare('SELECT * FROM job_descriptions').all() }
 }
 export function transaction<T>(db: DatabaseSync, fn: () => T): T {
   db.exec('BEGIN')

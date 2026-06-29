@@ -19,4 +19,14 @@ export function migrate(db: DatabaseSync): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT, source_module TEXT NOT NULL,
       metrics_json TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now')));
   `)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS job_descriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, company TEXT,
+      raw_text TEXT NOT NULL, structured_json TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')));
+  `)
+  // 幂等加列:列已存在时 ALTER 会抛错,用 try/catch 吞掉。
+  for (const col of ['job_description_id INTEGER', 'gap_json TEXT']) {
+    try { db.exec(`ALTER TABLE reviews ADD COLUMN ${col}`) } catch { /* 已存在 */ }
+  }
 }
