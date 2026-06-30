@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { AiProvider } from '../ai/provider'
 import { PROGRESS_STATUSES, type ProgressStatus } from '@aios/shared'
 import { listProblems, getProblem, setProgress, progressSummary,
-  createGuideSession, getGuideSession, finishGuideSession, createGuideTurn, answerGuideTurn, listGuideTurns } from '../db/repo'
+  createGuideSession, getGuideSession, finishGuideSession, createGuideTurn, answerGuideTurn, listGuideTurns, transaction } from '../db/repo'
 import { startGuide, continueGuide } from '../services/guide'
 import { HttpError } from '../middleware/error'
 
@@ -47,12 +47,11 @@ export function leetcodeRouter(db: DatabaseSync, ai: AiProvider) {
       history.push({ question: pending.question, answer })
 
       const step = await continueGuide(ai, { cliSessionId: session.cliSessionId, problem, history, question: pending.question, answer })
-      answerGuideTurn(db, pending.id, answer)
-      if (step.done) {
-        finishGuideSession(db, session.id)
-      } else {
-        createGuideTurn(db, { sessionId: session.id, turnIndex: pending.turnIndex + 1, question: step.guidance })
-      }
+      transaction(db, () => {
+        answerGuideTurn(db, pending.id, answer)
+        if (step.done) finishGuideSession(db, session.id)
+        else createGuideTurn(db, { sessionId: session.id, turnIndex: pending.turnIndex + 1, question: step.guidance })
+      })
       res.json({ guidance: step.guidance, done: step.done })
     } catch (e) { next(e) }
   })

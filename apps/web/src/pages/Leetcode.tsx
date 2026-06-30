@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
-import { Card, Badge } from '../components/ui'
+import { Badge } from '../components/ui'
 import type { LcProblem, ProgressStatus, Difficulty } from '@aios/shared'
 
 type P = LcProblem & { status: ProgressStatus }
