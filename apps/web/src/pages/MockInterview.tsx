@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { JdSelector } from './JdSelector'
 import { Card, Button } from '../components/ui'
@@ -18,6 +18,14 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [report, setReport] = useState<InterviewReport | null>(null)
+  const endRef = useRef<HTMLDivElement>(null)
+
+  // 对话更新后自动滚到底部(遵守 prefers-reduced-motion)
+  useEffect(() => {
+    if (phase !== 'chat') return
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    endRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'end' })
+  }, [msgs, busy, phase])
 
   async function start() {
     setBusy(true); setError('')
@@ -40,6 +48,14 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
       if (r.finished && r.report) { setReport(r.report); setPhase('done') }
       else if (r.nextQuestion) setMsgs(m => [...m, { role:'ai', text: r.nextQuestion! }])
     } catch (e: any) { setError(e.message) } finally { setBusy(false) }
+  }
+
+  function onInputKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Enter 提交,Shift+Enter 换行
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (!busy) submit()
+    }
   }
 
   const Back = () => (
@@ -121,12 +137,13 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
           </div>
         ))}
         {busy && <div className="flex items-center gap-2 text-sm text-muted"><Loader2 size={14} className="animate-spin" /> 面试官思考中…</div>}
+        <div ref={endRef} />
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
-        <textarea aria-label="你的回答" rows={3} value={input} onChange={e => setInput(e.target.value)} disabled={busy}
+        <textarea aria-label="你的回答" rows={3} value={input} onChange={e => setInput(e.target.value)} onKeyDown={onInputKeyDown} disabled={busy}
           className="flex-1 rounded-btn border border-border bg-surface-2 px-3 py-2 text-sm text-text placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/40"
-          placeholder="输入你的回答…" />
+          placeholder="输入你的回答…（Enter 提交，Shift+Enter 换行）" />
         <Button variant="primary" onClick={submit} disabled={busy}>提交回答</Button>
       </div>
     </div>
