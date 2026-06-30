@@ -6,17 +6,20 @@ import { ResumeReview } from './pages/ResumeReview'
 import { ResumeCompare } from './pages/ResumeCompare'
 import { InterviewKit } from './pages/InterviewKit'
 import { MockInterview } from './pages/MockInterview'
+import { Leetcode } from './pages/Leetcode'
+import { LcGuide } from './pages/LcGuide'
 import { Dashboard } from './pages/Dashboard'
-import { LayoutDashboard, FileText, Download, Moon, Sun, Sparkles, ChevronLeft, MessagesSquare } from 'lucide-react'
+import { LayoutDashboard, FileText, Download, Moon, Sun, Sparkles, ChevronLeft, MessagesSquare, Code2 } from 'lucide-react'
 import type { Review, StructuredResume } from '@aios/shared'
 
 export default function App() {
   const { dark, toggle } = useTheme()
-  const [view, setView] = useState<'dashboard' | 'resume' | 'interview'>('resume')
+  const [view, setView] = useState<'dashboard' | 'resume' | 'interview' | 'leetcode'>('resume')
   const [confirmedVersion, setConfirmedVersion] = useState<number | null>(null)
   const [confirmedStructured, setConfirmedStructured] = useState<StructuredResume | null>(null)
   const [optimizeSuggestions, setOptimizeSuggestions] = useState<Review['suggestions'] | null>(null)
   const [kitFor, setKitFor] = useState<{ versionId: number; jdId: number | null } | null>(null)
+  const [guideFor, setGuideFor] = useState<number | null>(null)
 
   function resetFlow() {
     setConfirmedVersion(null)
@@ -29,6 +32,7 @@ export default function App() {
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'resume' as const, label: '简历大师', icon: FileText },
     { id: 'interview' as const, label: '模拟面试', icon: MessagesSquare },
+    { id: 'leetcode' as const, label: '算法学习', icon: Code2 },
   ]
 
   return (
@@ -46,7 +50,7 @@ export default function App() {
               {navItems.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
-                  onClick={() => setView(id)}
+                  onClick={() => { setGuideFor(null); setView(id) }}
                   aria-current={view === id ? 'page' : undefined}
                   className={`flex cursor-pointer items-center gap-1.5 rounded-btn px-3 py-1.5 text-sm font-medium transition-colors ${
                     view === id ? 'bg-accent-soft text-accent' : 'text-muted hover:bg-surface-2 hover:text-text'
@@ -80,6 +84,12 @@ export default function App() {
       <main className="mx-auto max-w-6xl px-6 py-8">
         {view === 'dashboard' ? (
           <Dashboard />
+        ) : view === 'leetcode' ? (
+          guideFor !== null ? (
+            <LcGuide leetcodeId={guideFor} onBack={() => setGuideFor(null)} />
+          ) : (
+            <Leetcode onOpen={setGuideFor} />
+          )
         ) : view === 'interview' ? (
           confirmedVersion !== null ? (
             <MockInterview versionId={confirmedVersion} onBack={() => setView('resume')} />
