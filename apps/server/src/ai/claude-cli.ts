@@ -5,17 +5,19 @@ import type { AiProvider } from './provider'
 import { ConcurrencyQueue } from './queue'
 
 type SpawnFn = typeof nodeSpawn
-interface Opts { spawnFn?: SpawnFn; timeoutMs?: number; queue?: ConcurrencyQueue }
+interface Opts { spawnFn?: SpawnFn; timeoutMs?: number; queue?: ConcurrencyQueue; model?: string }
 
 export class ClaudeCliProvider implements AiProvider {
   private spawnFn: SpawnFn
   private timeoutMs: number
   private queue: ConcurrencyQueue
+  private model?: string
   private startedSessions = new Set<string>()
   constructor(o: Opts = {}) {
     this.spawnFn = o.spawnFn ?? nodeSpawn
     this.timeoutMs = o.timeoutMs ?? 120_000
     this.queue = o.queue ?? new ConcurrencyQueue(2)
+    this.model = o.model
   }
   complete(o: { system: string; prompt: string }): Promise<string> {
     return this.queue.run(() => this.invoke(o.system, o.prompt))
@@ -26,6 +28,7 @@ export class ClaudeCliProvider implements AiProvider {
   private invoke(system: string, prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const args = ['-p', '--output-format', 'text', '--append-system-prompt', system]
+      if (this.model) args.push('--model', this.model)
       const cp = this.spawnFn('claude', args, { shell: false })
       let out = '', err = ''
       const timer = setTimeout(() => { cp.kill('SIGKILL'); reject(new Error('AI 调用超时')) }, this.timeoutMs)
@@ -54,6 +57,7 @@ export class ClaudeCliProvider implements AiProvider {
       if (first) args.push('--session-id', sessionId)
       else args.push('--resume', sessionId)
       if (system) args.push('--append-system-prompt', system)
+      if (this.model) args.push('--model', this.model)
       const cp = this.spawnFn('claude', args, { shell: false })
       let out = '', err = ''
       const timer = setTimeout(() => { cp.kill('SIGKILL'); reject(new Error('AI 会话调用超时')) }, this.timeoutMs)
@@ -98,6 +102,11 @@ export async function completeJsonSession<T>(
 
 let singleton: ClaudeCliProvider | null = null
 export function getAi(): AiProvider { return (singleton ??= new ClaudeCliProvider()) }
+
+// LeetCode 引导讲题专用 provider:固定用 Sonnet(省 token,够用)。
+// 与默认 getAi() 分开,避免影响简历诊断/模拟面试。
+let guideSingleton: ClaudeCliProvider | null = null
+export function getGuideAi(): AiProvider { return (guideSingleton ??= new ClaudeCliProvider({ model: 'sonnet' })) }
 
 export async function selfCheck(): Promise<{ ok: boolean; detail: string }> {
   return new Promise((resolve) => {

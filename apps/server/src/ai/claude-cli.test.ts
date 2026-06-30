@@ -28,6 +28,25 @@ describe('ClaudeCliProvider', () => {
     expect(r).toEqual({ v: 1 })
     expect(spawnFn).toHaveBeenCalledTimes(2)
   })
+
+  it('passes --model when configured (complete and session)', async () => {
+    const spawnFn = vi.fn((_cmd: string, _args: string[], _opts: any) => makeCp('ok'))
+    const p = new ClaudeCliProvider({ spawnFn: spawnFn as any, model: 'sonnet' })
+    await p.complete({ system: 's', prompt: 'p' })
+    expect(spawnFn.mock.calls[0][1]).toContain('--model')
+    expect(spawnFn.mock.calls[0][1]).toContain('sonnet')
+    const sid = p.startSession!()
+    await p.continueSession!(sid, { prompt: 'q' })
+    expect(spawnFn.mock.calls[1][1]).toContain('--model')
+    expect(spawnFn.mock.calls[1][1]).toContain('sonnet')
+  })
+
+  it('omits --model when not configured', async () => {
+    const spawnFn = vi.fn((_cmd: string, _args: string[], _opts: any) => makeCp('ok'))
+    const p = new ClaudeCliProvider({ spawnFn: spawnFn as any })
+    await p.complete({ system: 's', prompt: 'p' })
+    expect(spawnFn.mock.calls[0][1]).not.toContain('--model')
+  })
 })
 
 describe('ClaudeCliProvider sessions', () => {

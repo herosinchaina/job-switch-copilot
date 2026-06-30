@@ -7,7 +7,8 @@ import { listProblems, getProblem, setProgress, progressSummary,
 import { startGuide, continueGuide } from '../services/guide'
 import { HttpError } from '../middleware/error'
 
-export function leetcodeRouter(db: DatabaseSync, ai: AiProvider) {
+// guideAi 默认回退到 ai(测试注入用同一个 fake);生产由 createApp 传入固定 Sonnet 的 provider。
+export function leetcodeRouter(db: DatabaseSync, ai: AiProvider, guideAi: AiProvider = ai) {
   const r = Router()
   r.get('/lc/problems', (_req, res) => res.json(listProblems(db)))
   r.get('/lc/summary', (_req, res) => res.json(progressSummary(db)))
@@ -26,7 +27,7 @@ export function leetcodeRouter(db: DatabaseSync, ai: AiProvider) {
     try {
       const problem = getProblem(db, Number(req.body.leetcodeId))
       if (!problem) throw new HttpError(404, '题目不存在')
-      const { cliSessionId, firstGuidance } = await startGuide(ai, problem)
+      const { cliSessionId, firstGuidance } = await startGuide(guideAi, problem)
       const sessionId = createGuideSession(db, { leetcodeId: problem.leetcodeId, cliSessionId })
       createGuideTurn(db, { sessionId, turnIndex: 0, question: firstGuidance })
       res.json({ sessionId, guidance: firstGuidance })
@@ -46,7 +47,7 @@ export function leetcodeRouter(db: DatabaseSync, ai: AiProvider) {
       const history = turns.filter(t => t.answer !== null).map(t => ({ question: t.question, answer: t.answer! }))
       history.push({ question: pending.question, answer })
 
-      const step = await continueGuide(ai, { cliSessionId: session.cliSessionId, problem, history, question: pending.question, answer })
+      const step = await continueGuide(guideAi, { cliSessionId: session.cliSessionId, problem, history, question: pending.question, answer })
       transaction(db, () => {
         answerGuideTurn(db, pending.id, answer)
         if (step.done) finishGuideSession(db, session.id)

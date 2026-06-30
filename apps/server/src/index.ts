@@ -16,7 +16,7 @@ import { leetcodeRouter } from './routes/leetcode'
 import { seedProblems } from './db/seed'
 import { errorHandler } from './middleware/error'
 
-export function createApp(db: DatabaseSync, ai: AiProvider): Express {
+export function createApp(db: DatabaseSync, ai: AiProvider, guideAi: AiProvider = ai): Express {
   const app = express()
   app.use(express.json({ limit: '2mb' }))
   seedProblems(db)
@@ -28,7 +28,7 @@ export function createApp(db: DatabaseSync, ai: AiProvider): Express {
   app.use('/api', kitsRouter(db, ai))
   app.use('/api', interviewsRouter(db, ai))
   app.use('/api', exportRouter(db))
-  app.use('/api', leetcodeRouter(db, ai))
+  app.use('/api', leetcodeRouter(db, ai, guideAi))
   app.use(errorHandler)
   return app
 }
@@ -36,12 +36,13 @@ export function createApp(db: DatabaseSync, ai: AiProvider): Express {
 // 仅在直接运行时启动真实服务(测试只 import createApp,不会触发 main)。
 async function main() {
   const { openDb } = await import('./db/repo')
-  const { getAi } = await import('./ai/claude-cli')
+  const { getAi, getGuideAi } = await import('./ai/claude-cli')
   // 数据库路径相对于本模块解析,避免依赖启动时的工作目录;确保目录存在。
   const dataDir = resolve(dirname(fileURLToPath(import.meta.url)), '../data')
   mkdirSync(dataDir, { recursive: true })
   const db = openDb(resolve(dataDir, 'aios.sqlite'))
-  createApp(db, getAi()).listen(5179, '127.0.0.1', () => console.log('server on http://127.0.0.1:5179'))
+  // 引导讲题固定用 Sonnet(getGuideAi);其余 AI 功能用默认模型(getAi)。
+  createApp(db, getAi(), getGuideAi()).listen(5179, '127.0.0.1', () => console.log('server on http://127.0.0.1:5179'))
 }
 
 // 健壮的"直接运行"判定:比较入口脚本与本模块的绝对路径(忽略扩展名差异)。
