@@ -1,4 +1,4 @@
-import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport } from '@aios/shared'
+import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport, ProgressStatus, LcProblem } from '@aios/shared'
 async function j<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts)
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
@@ -33,4 +33,11 @@ export const api = {
     j<{session:any; turns:any[]}>(`/api/interviews/${sessionId}`),
   listInterviews: () =>
     j<{id:number; role:string; roundType:RoundType; status:'active'|'finished'; overallScore:number|null; createdAt:string}[]>('/api/interviews'),
+  lcProblems: () => j<(LcProblem & { status: ProgressStatus })[]>('/api/lc/problems'),
+  lcSummary: () => j<{total:number;mastered:number;learning:number;byTopic:{topic:string;total:number;mastered:number}[]}>('/api/lc/summary'),
+  setLcProgress: (leetcodeId:number, status:ProgressStatus) =>
+    j<{ok:true}>(`/api/lc/problems/${leetcodeId}/progress`, { ...json({ status }), method:'PUT' }),
+  startGuide: (leetcodeId:number) => j<{sessionId:number; guidance:string}>('/api/lc/guides', json({ leetcodeId })),
+  stepGuide: (sessionId:number, answer:string) => j<{guidance:string; done:boolean}>(`/api/lc/guides/${sessionId}/step`, json({ answer })),
+  getGuide: (sessionId:number) => j<{session:any; turns:any[]}>(`/api/lc/guides/${sessionId}`),
 }
