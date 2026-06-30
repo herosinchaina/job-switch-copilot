@@ -210,3 +210,55 @@ describe('interview routes', () => {
     expect(a2.body.report.overallScore).toBe(70)
   })
 })
+
+// 引导用会话感知 fake(复用现有 import:request/openDb/createApp/AiProvider)
+function lcAi() {
+  const firstG = '这题考点是什么?先想想。'
+  const step = JSON.stringify({ guidance:'不错,继续想优化', done:false })
+  const stepDone = JSON.stringify({ guidance:'你已经掌握了,真棒', done:true })
+  let n = 0
+  const handle = (prompt: string) => {
+    if (prompt.includes('开始引导我学这道题')) return firstG
+    n++; return n >= 2 ? stepDone : step
+  }
+  return {
+    async complete(o:any){ return handle(o.prompt) },
+    async *stream(o:any){ yield this.complete(o) },
+    startSession(){ return 'g-sess' },
+    async continueSession(_s:string, o:any){ return handle(o.prompt) },
+  } as any
+}
+
+describe('leetcode routes', () => {
+  it('lists seeded problems and summary', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, lcAi())
+    const list = await request(app).get('/api/lc/problems')
+    expect(list.status).toBe(200); expect(list.body.length).toBe(100)
+    expect(list.body[0].status).toBe('new')
+    const sum = await request(app).get('/api/lc/summary')
+    expect(sum.body.total).toBe(100)
+  })
+  it('sets progress (400 on bad status, 404 unknown id)', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, lcAi())
+    expect((await request(app).put('/api/lc/problems/1/progress').send({ status:'mastered' })).status).toBe(200)
+    expect((await request(app).put('/api/lc/problems/1/progress').send({ status:'wat' })).status).toBe(400)
+    expect((await request(app).put('/api/lc/problems/99999/progress').send({ status:'mastered' })).status).toBe(404)
+    expect((await request(app).get('/api/lc/summary')).body.mastered).toBe(1)
+  })
+  it('runs a guide session to done', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, lcAi())
+    const start = await request(app).post('/api/lc/guides').send({ leetcodeId:1 })
+    expect(start.status).toBe(200); expect(start.body.guidance).toBeTruthy()
+    const sid = start.body.sessionId
+    const s1 = await request(app).post(`/api/lc/guides/${sid}/step`).send({ answer:'用哈希表' })
+    expect(s1.body.done).toBe(false)
+    const s2 = await request(app).post(`/api/lc/guides/${sid}/step`).send({ answer:'存补数,O(n)' })
+    expect(s2.body.done).toBe(true)
+    const got = await request(app).get(`/api/lc/guides/${sid}`)
+    expect(got.body.session.status).toBe('finished')
+  })
+  it('404 guide on unknown problem', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, lcAi())
+    expect((await request(app).post('/api/lc/guides').send({ leetcodeId:99999 })).status).toBe(404)
+  })
+})
