@@ -3,6 +3,8 @@ import type { DatabaseSync } from 'node:sqlite'
 import { openDb, createResume, createVersion, confirmVersion, getVersion, createReview, listResumes, transaction, createJd, getJd, listJds, getReviewRow } from './repo'
 import { createKit, getKit } from './repo'
 import { createSession, getSession, finishSession, createTurn, answerTurnRow, listTurns } from './repo'
+import { seedProblems, listProblems, getProblem, setProgress, progressSummary,
+  createGuideSession, getGuideSession, finishGuideSession, createGuideTurn, answerGuideTurn, listGuideTurns } from './repo'
 
 let db: DatabaseSync
 beforeEach(() => { db = openDb(':memory:') })
@@ -103,5 +105,33 @@ describe('interview repo', () => {
     finishSession(db, sid, report)
     const s = getSession(db, sid)!
     expect(s.status).toBe('finished'); expect(s.report!.overallScore).toBe(70)
+  })
+})
+
+describe('leetcode repo', () => {
+  it('seeds 100 problems idempotently', () => {
+    const db = openDb(':memory:')
+    seedProblems(db); seedProblems(db)               // 跑两次
+    expect(listProblems(db).length).toBe(100)
+    expect(getProblem(db, 1)!.title).toBe('两数之和')
+    expect(getProblem(db, 1)!.status).toBe('new')    // 无进度记录默认 new
+  })
+  it('sets progress and summarizes', () => {
+    const db = openDb(':memory:'); seedProblems(db)
+    setProgress(db, 1, 'mastered'); setProgress(db, 1, 'mastered')  // UPSERT
+    expect(getProblem(db, 1)!.status).toBe('mastered')
+    const s = progressSummary(db)
+    expect(s.total).toBe(100); expect(s.mastered).toBe(1)
+    expect(s.byTopic.find(t => t.topic === '哈希')!.total).toBeGreaterThan(0)
+  })
+  it('round-trips a guide session + turns', () => {
+    const db = openDb(':memory:'); seedProblems(db)
+    const sid = createGuideSession(db, { leetcodeId:1, cliSessionId:'uuid-1' })
+    expect(getGuideSession(db, sid)!.status).toBe('active')
+    const t = createGuideTurn(db, { sessionId:sid, turnIndex:0, question:'考点是什么?' })
+    answerGuideTurn(db, t, '哈希查找')
+    expect(listGuideTurns(db, sid)[0].answer).toBe('哈希查找')
+    finishGuideSession(db, sid)
+    expect(getGuideSession(db, sid)!.status).toBe('finished')
   })
 })

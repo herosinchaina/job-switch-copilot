@@ -60,4 +60,18 @@ export function migrate(db: DatabaseSync): void {
       is_weak INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')));
   `)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS lc_problems (
+      leetcode_id INTEGER PRIMARY KEY, title TEXT NOT NULL, difficulty TEXT NOT NULL,
+      topic TEXT NOT NULL, key_idea TEXT NOT NULL, url TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS lc_progress (
+      leetcode_id INTEGER PRIMARY KEY REFERENCES lc_problems(leetcode_id),
+      status TEXT NOT NULL, updated_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS lc_guide_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, leetcode_id INTEGER NOT NULL REFERENCES lc_problems(leetcode_id),
+      cli_session_id TEXT, status TEXT NOT NULL DEFAULT 'active', created_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS lc_guide_turns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER NOT NULL REFERENCES lc_guide_sessions(id),
+      turn_index INTEGER NOT NULL, question TEXT NOT NULL, answer TEXT, created_at TEXT DEFAULT (datetime('now')));
+  `)
 }

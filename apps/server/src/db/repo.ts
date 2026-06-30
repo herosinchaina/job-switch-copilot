@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { migrate } from './connection'
-import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType } from '@aios/shared'
+import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType, type LcProblem, type ProgressStatus } from '@aios/shared'
+export { seedProblems } from './seed'
 
 export function openDb(file: string): DatabaseSync {
   const db = new DatabaseSync(file); db.exec('PRAGMA foreign_keys = ON'); migrate(db); return db
@@ -58,7 +59,10 @@ export function exportAll(db: DatabaseSync) {
     jobDescriptions: db.prepare('SELECT * FROM job_descriptions').all(),
     interviewKits: db.prepare('SELECT * FROM interview_kits').all(),
     interviewSessions: db.prepare('SELECT * FROM interview_sessions').all(),
-    interviewTurns: db.prepare('SELECT * FROM interview_turns').all() }
+    interviewTurns: db.prepare('SELECT * FROM interview_turns').all(),
+    lcProgress: db.prepare('SELECT * FROM lc_progress').all(),
+    lcGuideSessions: db.prepare('SELECT * FROM lc_guide_sessions').all(),
+    lcGuideTurns: db.prepare('SELECT * FROM lc_guide_turns').all() }
 }
 export function createKit(db: DatabaseSync, k: { resumeVersionId:number; jobDescriptionId:number|null; kit:InterviewKit }): number {
   return Number(db.prepare('INSERT INTO interview_kits (resume_version_id,job_description_id,kit_json) VALUES (?,?,?)')
@@ -110,4 +114,58 @@ export function listSessions(db: DatabaseSync) {
     status: r.status as 'active'|'finished',
     overallScore: r.report_json ? (InterviewReportSchema.parse(JSON.parse(r.report_json)).overallScore) : null,
     createdAt: r.created_at as string }))
+}
+
+type ProblemWithStatus = LcProblem & { status: ProgressStatus }
+function rowToProblem(r: any): ProblemWithStatus {
+  return { leetcodeId: r.leetcode_id, title: r.title, difficulty: r.difficulty, topic: r.topic,
+    keyIdea: r.key_idea, url: r.url, status: (r.status ?? 'new') as ProgressStatus }
+}
+export function listProblems(db: DatabaseSync): ProblemWithStatus[] {
+  const rows = db.prepare(`SELECT p.*, pr.status FROM lc_problems p
+    LEFT JOIN lc_progress pr ON pr.leetcode_id = p.leetcode_id ORDER BY p.leetcode_id`).all() as any[]
+  return rows.map(rowToProblem)
+}
+export function getProblem(db: DatabaseSync, leetcodeId: number): ProblemWithStatus | undefined {
+  const r = db.prepare(`SELECT p.*, pr.status FROM lc_problems p
+    LEFT JOIN lc_progress pr ON pr.leetcode_id = p.leetcode_id WHERE p.leetcode_id=?`).get(leetcodeId) as any
+  return r ? rowToProblem(r) : undefined
+}
+export function setProgress(db: DatabaseSync, leetcodeId: number, status: ProgressStatus): void {
+  db.prepare(`INSERT INTO lc_progress (leetcode_id,status,updated_at) VALUES (?,?,datetime('now'))
+    ON CONFLICT(leetcode_id) DO UPDATE SET status=excluded.status, updated_at=datetime('now')`).run(leetcodeId, status)
+}
+export function progressSummary(db: DatabaseSync) {
+  const total = (db.prepare('SELECT COUNT(*) c FROM lc_problems').get() as any).c
+  const mastered = (db.prepare("SELECT COUNT(*) c FROM lc_progress WHERE status='mastered'").get() as any).c
+  const learning = (db.prepare("SELECT COUNT(*) c FROM lc_progress WHERE status='learning'").get() as any).c
+  const byTopic = db.prepare(`SELECT p.topic,
+      COUNT(*) total,
+      SUM(CASE WHEN pr.status='mastered' THEN 1 ELSE 0 END) mastered
+    FROM lc_problems p LEFT JOIN lc_progress pr ON pr.leetcode_id=p.leetcode_id
+    GROUP BY p.topic`).all() as any[]
+  return { total, mastered, learning, byTopic: byTopic.map(t => ({ topic: t.topic, total: t.total, mastered: Number(t.mastered) })) }
+}
+export function createGuideSession(db: DatabaseSync, s: { leetcodeId:number; cliSessionId:string|null }): number {
+  return Number(db.prepare('INSERT INTO lc_guide_sessions (leetcode_id,cli_session_id) VALUES (?,?)')
+    .run(s.leetcodeId, s.cliSessionId).lastInsertRowid)
+}
+export function getGuideSession(db: DatabaseSync, id: number) {
+  const r = db.prepare('SELECT * FROM lc_guide_sessions WHERE id=?').get(id) as any
+  if (!r) return undefined
+  return { id: r.id, leetcodeId: r.leetcode_id, cliSessionId: r.cli_session_id ?? null, status: r.status as 'active'|'finished' }
+}
+export function finishGuideSession(db: DatabaseSync, id: number): void {
+  db.prepare("UPDATE lc_guide_sessions SET status='finished' WHERE id=?").run(id)
+}
+export function createGuideTurn(db: DatabaseSync, t: { sessionId:number; turnIndex:number; question:string }): number {
+  return Number(db.prepare('INSERT INTO lc_guide_turns (session_id,turn_index,question) VALUES (?,?,?)')
+    .run(t.sessionId, t.turnIndex, t.question).lastInsertRowid)
+}
+export function answerGuideTurn(db: DatabaseSync, turnId: number, answer: string): void {
+  db.prepare('UPDATE lc_guide_turns SET answer=? WHERE id=?').run(answer, turnId)
+}
+export function listGuideTurns(db: DatabaseSync, sessionId: number) {
+  const rows = db.prepare('SELECT * FROM lc_guide_turns WHERE session_id=? ORDER BY turn_index').all(sessionId) as any[]
+  return rows.map(r => ({ id: r.id, turnIndex: r.turn_index, question: r.question, answer: r.answer ?? null }))
 }
