@@ -104,3 +104,10 @@ export function listTurns(db: DatabaseSync, sessionId: number) {
     score: r.score ?? null, feedback: r.feedback_json ? TurnFeedbackSchema.parse(JSON.parse(r.feedback_json)) : null,
     isWeak: !!r.is_weak }))
 }
+export function listSessions(db: DatabaseSync) {
+  const rows = db.prepare('SELECT id,role,round_type,status,report_json,created_at FROM interview_sessions ORDER BY id DESC').all() as any[]
+  return rows.map(r => ({ id: r.id, role: r.role, roundType: r.round_type as RoundType,
+    status: r.status as 'active'|'finished',
+    overallScore: r.report_json ? (InterviewReportSchema.parse(JSON.parse(r.report_json)).overallScore) : null,
+    createdAt: r.created_at as string }))
+}

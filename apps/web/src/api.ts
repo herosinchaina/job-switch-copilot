@@ -31,4 +31,6 @@ export const api = {
       `/api/interviews/${sessionId}/answer`, json({ answer })),
   getInterview: (sessionId: number) =>
     j<{session:any; turns:any[]}>(`/api/interviews/${sessionId}`),
+  listInterviews: () =>
+    j<{id:number; role:string; roundType:RoundType; status:'active'|'finished'; overallScore:number|null; createdAt:string}[]>('/api/interviews'),
 }

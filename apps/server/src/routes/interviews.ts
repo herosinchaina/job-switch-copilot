@@ -3,11 +3,13 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { AiProvider } from '../ai/provider'
 import { ROUND_TYPES, type RoundType } from '@aios/shared'
 import { startInterview, answerTurn, generateReport } from '../services/interview'
-import { getVersion, getJd, createSession, getSession, finishSession, createTurn, answerTurnRow, listTurns } from '../db/repo'
+import { getVersion, getJd, createSession, getSession, finishSession, createTurn, answerTurnRow, listTurns, listSessions } from '../db/repo'
 import { HttpError } from '../middleware/error'
 
 export function interviewsRouter(db: DatabaseSync, ai: AiProvider) {
   const r = Router()
+
+  r.get('/interviews', (_req, res) => res.json(listSessions(db)))
 
   r.post('/interviews', async (req, res, next) => {
     try {

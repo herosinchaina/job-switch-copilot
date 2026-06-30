@@ -157,6 +157,17 @@ describe('interview routes', () => {
     const got = await request(app).get(`/api/interviews/${start.body.sessionId}`)
     expect(got.body.session.maxRounds).toBe(12)
   })
+  it('lists past interview sessions with summary fields', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, interviewAi())
+    const vid = await confirmedVersion(app)
+    const start = await request(app).post('/api/interviews').send({ versionId: vid, roundType:'tech', maxRounds:6 })
+    await request(app).post(`/api/interviews/${start.body.sessionId}/answer`).send({ answer:'a1' })
+    await request(app).post(`/api/interviews/${start.body.sessionId}/answer`).send({ answer:'a2' })
+    const list = await request(app).get('/api/interviews')
+    expect(list.status).toBe(200)
+    expect(list.body.length).toBe(1)
+    expect(list.body[0]).toMatchObject({ id: start.body.sessionId, roundType: 'tech', status: 'finished', overallScore: 70 })
+  })
   it('404 on unknown jobDescriptionId', async () => {
     const db = openDb(':memory:'); const app = createApp(db, interviewAi())
     const vid = await confirmedVersion(app)
