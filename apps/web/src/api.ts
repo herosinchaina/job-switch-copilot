@@ -1,4 +1,4 @@
-import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport, ProgressStatus, LcProblem } from '@aios/shared'
+import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport, ProgressStatus, LcProblem, DeepdiveFeedback, ProjectMap } from '@aios/shared'
 async function j<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts)
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
@@ -40,4 +40,11 @@ export const api = {
   startGuide: (leetcodeId:number) => j<{sessionId:number; guidance:string}>('/api/lc/guides', json({ leetcodeId })),
   stepGuide: (sessionId:number, answer:string) => j<{guidance:string; done:boolean}>(`/api/lc/guides/${sessionId}/step`, json({ answer })),
   getGuide: (sessionId:number) => j<{session:any; turns:any[]}>(`/api/lc/guides/${sessionId}`),
+  startDeepdive: (input: { versionId:number; projectName:string; maxRounds?:number }) =>
+    j<{sessionId:number; turnIndex:number; question:string}>('/api/deepdives', json(input)),
+  answerDeepdive: (sessionId:number, answer:string) =>
+    j<{feedback:DeepdiveFeedback|null; nextQuestion:string|null; turnIndex:number; finished:boolean; map?:ProjectMap}>(
+      `/api/deepdives/${sessionId}/answer`, json({ answer })),
+  getDeepdive: (sessionId:number) => j<{session:any; turns:any[]}>(`/api/deepdives/${sessionId}`),
+  listDeepdives: () => j<{id:number; projectName:string; status:'active'|'finished'; total:number|null; createdAt:string}[]>('/api/deepdives'),
 }
