@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { AiProvider } from '../ai/provider'
-import { startDeepdive, findProject, answerDeepdive } from './deepdive'
+import { startDeepdive, findProject, answerDeepdive, generateMap } from './deepdive'
 
 const resume = { basics:{name:'A',title:'T',contact:'c',summary:''}, education:[],work:[],
   projects:[{name:'体验生判',role:'负责人',period:'',stack:['Zeus','RAG'],bullets:['用 LLM 对 query/类别打分'],metrics:['acc+1.5pp']}],
@@ -43,5 +43,16 @@ describe('answerDeepdive', () => {
       startSession(){return 's'}, async continueSession(){ throw new Error('resume failed') } }
     const step = await answerDeepdive(ai, { ...base, cliSessionId:'s1' })
     expect(usedComplete).toBe(true); expect(step.feedback!.total).toBe(30)
+  })
+})
+
+const mapOut = JSON.stringify({ projectName:'体验生判', background:'b', businessGoal:'g', techApproach:'t', personalContribution:'c',
+  coreChallenges:['难'], alternatives:['别的'], evaluation:'e', risks:['风险'], optimizations:['优化'], hotQuestions:['追问'], blindSpots:['阈值'] })
+
+describe('generateMap', () => {
+  it('returns a validated project map', async () => {
+    const ai: AiProvider = { async complete(){ return mapOut }, async *stream(){ yield mapOut } }
+    const m = await generateMap(ai, { resume, projectName:'体验生判', turns:[{question:'q',answer:'a',score:30}] })
+    expect(m.projectName).toBe('体验生判'); expect(m.blindSpots).toContain('阈值')
   })
 })

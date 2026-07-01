@@ -4,11 +4,12 @@ import { dirname, join } from 'node:path'
 import type { AiProvider } from '../ai/provider'
 import type { StructuredResume } from '@aios/shared'
 import { completeJson, completeJsonSession } from '../ai/claude-cli'
-import { DeepdiveStepSchema, type DeepdiveStep } from '@aios/shared'
+import { DeepdiveStepSchema, type DeepdiveStep, ProjectMapSchema, type ProjectMap } from '@aios/shared'
 
 const dir = dirname(fileURLToPath(import.meta.url))
 const SYSTEM = readFileSync(join(dir, '../prompts/deepdive-system.txt'), 'utf8')
 const STEP = readFileSync(join(dir, '../prompts/deepdive-step.txt'), 'utf8')
+const MAP = readFileSync(join(dir, '../prompts/deepdive-map.txt'), 'utf8')
 
 export function buildDeepdiveSystem(): string { return SYSTEM }
 
@@ -46,4 +47,12 @@ export async function answerDeepdive(ai: AiProvider, ctx: {
   const hist = ctx.history.map((h, i) => `Q${i}: ${h.question}\nA${i}: ${h.answer}`).join('\n')
   const prompt = `${projectBrief(ctx.resume, ctx.projectName)}\n\n问答记录:\n${hist}\n\n${stepPrompt}`
   return completeJson(ai, DeepdiveStepSchema, { system: `${SYSTEM}\n\n${STEP}`, prompt })
+}
+
+export function generateMap(ai: AiProvider, input: {
+  resume: StructuredResume; projectName: string; turns: Array<{ question: string; answer: string; score: number }>
+}): Promise<ProjectMap> {
+  const body = input.turns.map((t, i) => `Q${i}: ${t.question}\nA${i}: ${t.answer}\n本轮总分: ${t.score}`).join('\n\n')
+  const prompt = `${projectBrief(input.resume, input.projectName)}\n\n深挖问答与评分:\n${body}\n\n请生成该项目的知识地图。`
+  return completeJson(ai, ProjectMapSchema, { system: `${SYSTEM}\n\n${MAP}`, prompt })
 }
