@@ -101,8 +101,10 @@ ProjectMapSchema = {
 
 ### Prompt 文件(apps/server/src/prompts/)
 - `deepdive-system.txt` — 资深技术面试官人设 + 10 个技术追问方向 + 追问范式(只问一个/基于上一答连续追问/不放过空泛回答/直接进技术细节)+ 严格围绕该项目不跑题。**采用用户提供的项目深挖 prompt 内容**(适配为"针对已锁定的单个项目",项目由路由传入而非 AI 自选)。
+  - **追问锚定简历原文**:startDeepdive 注入该项目的完整 `bullets`/`metrics`/`stack` 原句;prompt 明确要求「每个追问必须引用简历里的具体表述」(如"你提到用 LLM 对 query/类别/大卡/ASR 打分,这个 Prompt 如何设计…"),避免问成脱离项目的泛题。这是"深挖"与"泛问"的分水岭。
 - `deepdive-step.txt` — 每轮:输出 JSON,含 5 维评分 + 5 项点评 + nextQuestion;done 由 nextQuestion=null 表达。
-- `deepdive-map.txt` — 结束产出 ProjectMap 的 JSON 约束。
+  - **答不上来是常态,评分不塌**:候选人常会答"当时没细想/不清楚"。prompt 要求区分「真不会」与「表达差」,此时 `betterAnswer` 必须给出**这道题该怎么答**(训练价值所在),而非只扣分。
+- `deepdive-map.txt` — 结束产出 ProjectMap 的 JSON 约束。**地图字段(背景/技术方案/贡献等)基于简历 + 用户回答,不得杜撰**;`blindSpots` 专门记录"问到但答不出/答错"的点。
 
 ### 数据层 `db/repo.ts` 新增
 - `createDeepdiveSession/getDeepdiveSession/finishDeepdiveSession(map)/createDeepdiveTurn/answerDeepdiveTurn(score,feedback→is_weak)/listDeepdiveTurns/listDeepdiveSessions`(平行模块四)
@@ -120,9 +122,9 @@ ProjectMapSchema = {
 api.ts:`listProjects`(从已确认简历取 projects——已有 confirmedStructured,前端直接用,无需新接口)、`startDeepdive({versionId, projectName})`、`answerDeepdive(sessionId, answer)`、`getDeepdive(sessionId)`、`listDeepdives()`。
 
 新页 `pages/ProjectDeepdive.tsx`:
-- **选项目**:列出当前 confirmed 简历的 projects(name + role + stack 预览),用户点一个 → 开深挖。也展示历史深挖列表(可回看)。
+- **选项目**:列出当前 confirmed 简历的 projects(name + role + stack 预览),用户点一个 → 开深挖。也展示历史深挖列表(可回看)。**空状态**:若简历 `projects` 为空(项目写在工作经历里等),提示「未检测到项目,请回『简历大师』补充并确认项目后再来」,不显示空白。
 - **对话区**:聊天式(复用模块四气泡 + Enter 提交 + 自动滚动)。AI 技术追问 / 用户作答;作答后展示本轮 5 维评分卡(雷达或条形)+ 点评(讲得好/空泛/缺失/会追问/更优答法,可折叠)。
-- **结束**:展示「项目知识地图」——分区卡片(背景/业务目标/技术方案/个人贡献/难点/替代方案/评估/风险/优化/高频追问/盲区)。
+- **结束**:展示「项目知识地图」——分区卡片(背景/业务目标/技术方案/个人贡献/难点/替代方案/评估/风险/优化/高频追问/盲区),并在**底部列出「本次薄弱问题」**:直接从本 session 的 `is_weak` turns 读出(问题 + 5维总分 + 更优答法),让单次深挖自成闭环(不依赖模块六错题本)。
 - 入口:顶部导航新增「项目深挖」;需要有 confirmed 简历,否则提示先去简历大师。纯文本渲染。
 
 ## 7. 测试
@@ -131,7 +133,7 @@ api.ts:`listProjects`(从已确认简历取 projects——已有 confirmedStruct
 - 数据层:session/turns round-trip;is_weak 阈值(score<30);map 写读;exportAll 含新表。
 - 服务:startDeepdive 出首问(fake 会话 AI);answerDeepdive 会话正常 + 会话失败降级;generateMap 产出合法地图;maxRounds 到顶。
 - 路由:开深挖 409(未 confirmed)/ 400(项目不在简历中);answer 流转(评分→下一问→结束出地图);硬停(AI 仍返回 nextQuestion 时到上限强制结束);GET 列表/回看。
-- 前端:选项目→开始→答一轮→看到 5 维评分;结束→知识地图渲染(jsdom)。
+- 前端:选项目→开始→答一轮→看到 5 维评分;结束→知识地图渲染;项目为空时显示空状态提示;知识地图页底部「本次薄弱问题」由 is_weak turns 渲染(jsdom)。
 
 ## 8. 向后兼容
 纯新增表/服务/路由/页面;现有 100 测试与所有流程不变。会话引擎复用模块四,不改动其代码。
