@@ -74,4 +74,18 @@ export function migrate(db: DatabaseSync): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER NOT NULL REFERENCES lc_guide_sessions(id),
       turn_index INTEGER NOT NULL, question TEXT NOT NULL, answer TEXT, created_at TEXT DEFAULT (datetime('now')));
   `)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS project_deepdive_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      resume_version_id INTEGER NOT NULL REFERENCES resume_versions(id),
+      project_name TEXT NOT NULL, cli_session_id TEXT,
+      max_rounds INTEGER NOT NULL DEFAULT 8, status TEXT NOT NULL DEFAULT 'active',
+      map_json TEXT, created_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS project_deepdive_turns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL REFERENCES project_deepdive_sessions(id),
+      turn_index INTEGER NOT NULL, question TEXT NOT NULL, answer TEXT,
+      score INTEGER, feedback_json TEXT, is_weak INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')));
+  `)
 }

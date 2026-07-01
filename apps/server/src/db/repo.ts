@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { migrate } from './connection'
-import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType, type LcProblem, type ProgressStatus } from '@aios/shared'
+import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, ProjectMapSchema, DeepdiveFeedbackSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType, type LcProblem, type ProgressStatus, type ProjectMap, type DeepdiveFeedback } from '@aios/shared'
 export { seedProblems } from './seed'
 
 export function openDb(file: string): DatabaseSync {
@@ -62,7 +62,9 @@ export function exportAll(db: DatabaseSync) {
     interviewTurns: db.prepare('SELECT * FROM interview_turns').all(),
     lcProgress: db.prepare('SELECT * FROM lc_progress').all(),
     lcGuideSessions: db.prepare('SELECT * FROM lc_guide_sessions').all(),
-    lcGuideTurns: db.prepare('SELECT * FROM lc_guide_turns').all() }
+    lcGuideTurns: db.prepare('SELECT * FROM lc_guide_turns').all(),
+    deepdiveSessions: db.prepare('SELECT * FROM project_deepdive_sessions').all(),
+    deepdiveTurns: db.prepare('SELECT * FROM project_deepdive_turns').all() }
 }
 export function createKit(db: DatabaseSync, k: { resumeVersionId:number; jobDescriptionId:number|null; kit:InterviewKit }): number {
   return Number(db.prepare('INSERT INTO interview_kits (resume_version_id,job_description_id,kit_json) VALUES (?,?,?)')
@@ -168,4 +170,41 @@ export function answerGuideTurn(db: DatabaseSync, turnId: number, answer: string
 export function listGuideTurns(db: DatabaseSync, sessionId: number) {
   const rows = db.prepare('SELECT * FROM lc_guide_turns WHERE session_id=? ORDER BY turn_index').all(sessionId) as any[]
   return rows.map(r => ({ id: r.id, turnIndex: r.turn_index, question: r.question, answer: r.answer ?? null }))
+}
+
+export function createDeepdiveSession(db: DatabaseSync, s: { resumeVersionId:number; projectName:string; cliSessionId:string|null; maxRounds:number }): number {
+  return Number(db.prepare('INSERT INTO project_deepdive_sessions (resume_version_id,project_name,cli_session_id,max_rounds) VALUES (?,?,?,?)')
+    .run(s.resumeVersionId, s.projectName, s.cliSessionId, s.maxRounds).lastInsertRowid)
+}
+export function getDeepdiveSession(db: DatabaseSync, id: number) {
+  const r = db.prepare('SELECT * FROM project_deepdive_sessions WHERE id=?').get(id) as any
+  if (!r) return undefined
+  return { id: r.id, resumeVersionId: r.resume_version_id, projectName: r.project_name,
+    cliSessionId: r.cli_session_id ?? null, maxRounds: r.max_rounds, status: r.status as 'active'|'finished',
+    map: r.map_json ? ProjectMapSchema.parse(JSON.parse(r.map_json)) : null }
+}
+export function finishDeepdiveSession(db: DatabaseSync, id: number, map: ProjectMap): void {
+  db.prepare("UPDATE project_deepdive_sessions SET status='finished', map_json=? WHERE id=?").run(JSON.stringify(map), id)
+}
+export function createDeepdiveTurn(db: DatabaseSync, t: { sessionId:number; turnIndex:number; question:string }): number {
+  return Number(db.prepare('INSERT INTO project_deepdive_turns (session_id,turn_index,question) VALUES (?,?,?)')
+    .run(t.sessionId, t.turnIndex, t.question).lastInsertRowid)
+}
+export function answerDeepdiveTurn(db: DatabaseSync, turnId: number, a: { answer:string; score:number; feedback:DeepdiveFeedback }): void {
+  db.prepare('UPDATE project_deepdive_turns SET answer=?, score=?, feedback_json=?, is_weak=? WHERE id=?')
+    .run(a.answer, a.score, JSON.stringify(a.feedback), a.score < 30 ? 1 : 0, turnId)
+}
+export function listDeepdiveTurns(db: DatabaseSync, sessionId: number) {
+  const rows = db.prepare('SELECT * FROM project_deepdive_turns WHERE session_id=? ORDER BY turn_index').all(sessionId) as any[]
+  return rows.map(r => ({ id: r.id, turnIndex: r.turn_index, question: r.question, answer: r.answer ?? null,
+    score: r.score ?? null, feedback: r.feedback_json ? DeepdiveFeedbackSchema.parse(JSON.parse(r.feedback_json)) : null,
+    isWeak: !!r.is_weak }))
+}
+export function listDeepdiveSessions(db: DatabaseSync) {
+  const rows = db.prepare('SELECT id,project_name,status,created_at FROM project_deepdive_sessions ORDER BY id DESC').all() as any[]
+  return rows.map(r => {
+    const scored = db.prepare('SELECT score FROM project_deepdive_turns WHERE session_id=? AND score IS NOT NULL').all(r.id) as any[]
+    const total = scored.length ? Math.round(scored.reduce((s, x) => s + x.score, 0) / scored.length) : null
+    return { id: r.id, projectName: r.project_name, status: r.status as 'active'|'finished', total, createdAt: r.created_at as string }
+  })
 }

@@ -135,3 +135,37 @@ describe('leetcode repo', () => {
     expect(getGuideSession(db, sid)!.status).toBe('finished')
   })
 })
+
+import { createDeepdiveSession, getDeepdiveSession, finishDeepdiveSession,
+  createDeepdiveTurn, answerDeepdiveTurn, listDeepdiveTurns, listDeepdiveSessions } from './repo'
+
+describe('deepdive repo', () => {
+  function setup() {
+    const db = openDb(':memory:')
+    const rid = createResume(db, { title:'r', sourceFormat:'md', rawText:'x' })
+    const sample = { basics:{name:'A',title:'T',contact:'c',summary:''}, education:[],work:[],
+      projects:[{name:'体验生判',role:'负责人',period:'',stack:['LLM'],bullets:['RAG 召回'],metrics:[]}], skills:[],awards:[] }
+    const vid = createVersion(db, { resumeId:rid, kind:'original', parentVersionId:null, structured:sample, status:'confirmed' })
+    return { db, vid }
+  }
+  const fb = { scores:{techDepth:5,implementationClarity:5,architectureAwareness:5,metricsAwareness:5,expression:5},
+    total:25, strengths:[], vague:['浅'], missingDetails:[], followUps:[], betterAnswer:'深入' }
+  it('round-trips a session + turns and computes is_weak', () => {
+    const { db, vid } = setup()
+    const sid = createDeepdiveSession(db, { resumeVersionId:vid, projectName:'体验生判', cliSessionId:'uuid', maxRounds:8 })
+    expect(getDeepdiveSession(db, sid)!.projectName).toBe('体验生判')
+    const t = createDeepdiveTurn(db, { sessionId:sid, turnIndex:0, question:'RAG 怎么召回?' })
+    answerDeepdiveTurn(db, t, { answer:'嗯就召回', score:25, feedback:fb })
+    expect(listDeepdiveTurns(db, sid)[0].isWeak).toBe(true) // 25 < 30
+  })
+  it('finishDeepdiveSession writes map + flips status; listDeepdiveSessions lists it', () => {
+    const { db, vid } = setup()
+    const sid = createDeepdiveSession(db, { resumeVersionId:vid, projectName:'体验生判', cliSessionId:null, maxRounds:8 })
+    const map = { projectName:'体验生判', background:'b', businessGoal:'g', techApproach:'t', personalContribution:'c',
+      coreChallenges:[], alternatives:[], evaluation:'e', risks:[], optimizations:[], hotQuestions:[], blindSpots:['阈值'] }
+    finishDeepdiveSession(db, sid, map)
+    expect(getDeepdiveSession(db, sid)!.status).toBe('finished')
+    expect(getDeepdiveSession(db, sid)!.map!.blindSpots[0]).toBe('阈值')
+    expect(listDeepdiveSessions(db).length).toBe(1)
+  })
+})
