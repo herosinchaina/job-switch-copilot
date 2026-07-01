@@ -129,7 +129,7 @@ export default function App() {
             baseVersionId={confirmedVersion}
             base={confirmedStructured}
             suggestions={optimizeSuggestions}
-            onSaved={() => {}}
+            onSaved={(versionId, structured) => { setConfirmedVersion(versionId); setConfirmedStructured(structured) }}
           />
         </div>
       )

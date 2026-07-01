@@ -56,12 +56,12 @@ function PaneSkeleton() {
 }
 
 export function ResumeCompare({ baseVersionId, base, suggestions, onSaved }: {
-  baseVersionId: number; base: StructuredResume; suggestions: Review['suggestions']; onSaved: (versionId: number) => void
+  baseVersionId: number; base: StructuredResume; suggestions: Review['suggestions']; onSaved: (versionId: number, structured: StructuredResume) => void
 }) {
   const [opt, setOpt] = useState<StructuredResume | null>(null)
   const [error, setError] = useState('')
   useEffect(() => {
-    api.optimize(baseVersionId, suggestions).then(r => { setOpt(r.structured); onSaved(r.versionId) }).catch(e => setError(e.message))
+    api.optimize(baseVersionId, suggestions).then(r => { setOpt(r.structured); onSaved(r.versionId, r.structured) }).catch(e => setError(e.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseVersionId])
 

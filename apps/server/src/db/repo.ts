@@ -204,7 +204,8 @@ export function listDeepdiveSessions(db: DatabaseSync) {
   const rows = db.prepare('SELECT id,project_name,status,created_at FROM project_deepdive_sessions ORDER BY id DESC').all() as any[]
   return rows.map(r => {
     const scored = db.prepare('SELECT score FROM project_deepdive_turns WHERE session_id=? AND score IS NOT NULL').all(r.id) as any[]
-    const total = scored.length ? Math.round(scored.reduce((s, x) => s + x.score, 0) / scored.length) : null
-    return { id: r.id, projectName: r.project_name, status: r.status as 'active'|'finished', total, createdAt: r.created_at as string }
+    // 各轮总分(每轮 0-50)的平均;未评分则 null。
+    const avgScore = scored.length ? Math.round(scored.reduce((s, x) => s + x.score, 0) / scored.length) : null
+    return { id: r.id, projectName: r.project_name, status: r.status as 'active'|'finished', avgScore, createdAt: r.created_at as string }
   })
 }

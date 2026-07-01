@@ -46,5 +46,5 @@ export const api = {
     j<{feedback:DeepdiveFeedback|null; nextQuestion:string|null; turnIndex:number; finished:boolean; map?:ProjectMap}>(
       `/api/deepdives/${sessionId}/answer`, json({ answer })),
   getDeepdive: (sessionId:number) => j<{session:any; turns:any[]}>(`/api/deepdives/${sessionId}`),
-  listDeepdives: () => j<{id:number; projectName:string; status:'active'|'finished'; total:number|null; createdAt:string}[]>('/api/deepdives'),
+  listDeepdives: () => j<{id:number; projectName:string; status:'active'|'finished'; avgScore:number|null; createdAt:string}[]>('/api/deepdives'),
 }
