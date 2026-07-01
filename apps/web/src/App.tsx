@@ -9,12 +9,13 @@ import { MockInterview } from './pages/MockInterview'
 import { Leetcode } from './pages/Leetcode'
 import { LcGuide } from './pages/LcGuide'
 import { Dashboard } from './pages/Dashboard'
-import { LayoutDashboard, FileText, Download, Moon, Sun, Sparkles, ChevronLeft, MessagesSquare, Code2 } from 'lucide-react'
+import { ProjectDeepdive } from './pages/ProjectDeepdive'
+import { LayoutDashboard, FileText, Download, Moon, Sun, Sparkles, ChevronLeft, MessagesSquare, Code2, Layers } from 'lucide-react'
 import type { Review, StructuredResume } from '@aios/shared'
 
 export default function App() {
   const { dark, toggle } = useTheme()
-  const [view, setView] = useState<'dashboard' | 'resume' | 'interview' | 'leetcode'>('resume')
+  const [view, setView] = useState<'dashboard' | 'resume' | 'interview' | 'leetcode' | 'deepdive'>('resume')
   const [confirmedVersion, setConfirmedVersion] = useState<number | null>(null)
   const [confirmedStructured, setConfirmedStructured] = useState<StructuredResume | null>(null)
   const [optimizeSuggestions, setOptimizeSuggestions] = useState<Review['suggestions'] | null>(null)
@@ -32,6 +33,7 @@ export default function App() {
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'resume' as const, label: '简历大师', icon: FileText },
     { id: 'interview' as const, label: '模拟面试', icon: MessagesSquare },
+    { id: 'deepdive' as const, label: '项目深挖', icon: Layers },
     { id: 'leetcode' as const, label: '算法学习', icon: Code2 },
   ]
 
@@ -96,6 +98,14 @@ export default function App() {
           ) : (
             <div className="mx-auto max-w-2xl rounded-card border border-border bg-surface p-6 text-center text-sm text-muted">
               请先到「简历大师」上传并确认一份简历,再开始模拟面试。
+            </div>
+          )
+        ) : view === 'deepdive' ? (
+          confirmedVersion !== null && confirmedStructured !== null ? (
+            <ProjectDeepdive versionId={confirmedVersion} structured={confirmedStructured} onBack={() => setView('resume')} />
+          ) : (
+            <div className="mx-auto max-w-2xl rounded-card border border-border bg-surface p-6 text-center text-sm text-muted">
+              请先到「简历大师」上传并确认一份简历,再进行项目深挖。
             </div>
           )
         ) : (
