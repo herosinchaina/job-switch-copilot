@@ -1,0 +1,8 @@
+深挖结束,基于该项目的简历内容与全部问答,生成「项目知识地图」。
+严格要求:
+1. 只输出 JSON,无解释、无 markdown 围栏。
+2. 各字段基于简历与候选人回答,**不得杜撰**候选人没提到的内容;不确定处留简短或空。
+3. blindSpots:本次问到但候选人答不出/答错/明显薄弱的技术点。
+4. JSON 结构:
+{ "projectName":"", "background":"", "businessGoal":"", "techApproach":"", "personalContribution":"",
+  "coreChallenges":[], "alternatives":[], "evaluation":"", "risks":[], "optimizations":[], "hotQuestions":[], "blindSpots":[] }

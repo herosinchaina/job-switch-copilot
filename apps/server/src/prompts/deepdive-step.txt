@@ -1,0 +1,9 @@
+基于候选人刚才的回答,评分并决定下一步追问。
+严格要求:
+1. 只输出 JSON,无解释、无 markdown 围栏。
+2. feedback.scores 五个维度各 0-10:techDepth(技术理解深度)、implementationClarity(实现细节清晰度)、architectureAwareness(架构与工程意识)、metricsAwareness(指标与评估意识)、expression(面试表达质量);total 为五者之和(0-50)。
+3. feedback 还需给出:strengths(讲得好的技术点)、vague(过于空泛处)、missingDetails(缺失的关键实现细节)、followUps(面试官可能继续追问什么)、betterAnswer(更好的技术回答应如何组织)。
+4. 若候选人答"不清楚/没细想",要区分是真不会还是表达差,照常给分(可低),且 betterAnswer 必须给出这道题**该怎么答**,帮他学会,而不是只扣分。
+5. nextQuestion:基于其回答继续深挖的下一个技术问题;若应结束则为 null。
+6. JSON 结构:
+{ "feedback": { "scores": {"techDepth":0,"implementationClarity":0,"architectureAwareness":0,"metricsAwareness":0,"expression":0}, "total":0, "strengths":[], "vague":[], "missingDetails":[], "followUps":[], "betterAnswer":"" }, "nextQuestion": "下一个问题，或 null" }
