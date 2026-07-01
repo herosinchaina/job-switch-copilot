@@ -262,3 +262,52 @@ describe('leetcode routes', () => {
     expect((await request(app).post('/api/lc/guides').send({ leetcodeId:99999 })).status).toBe(404)
   })
 })
+
+// 会话感知 fake:parse / 首问 / step / map 按 system|prompt 分辨
+function deepdiveAi() {
+  const parsed = JSON.stringify({ basics:{name:'A',title:'T',contact:'c',summary:''}, education:[],work:[],
+    projects:[{name:'体验生判',role:'负责人',period:'',stack:['RAG'],bullets:['LLM 打分'],metrics:[]}], skills:[],awards:[] })
+  const firstQ = '你提到 LLM 打分,Prompt 如何设计?'
+  const stepGo = JSON.stringify({ feedback:{ scores:{techDepth:6,implementationClarity:6,architectureAwareness:6,metricsAwareness:6,expression:6}, total:30, strengths:[], vague:[], missingDetails:[], followUps:[], betterAnswer:'' }, nextQuestion:'召回排序?' })
+  const stepEnd = JSON.stringify({ feedback:{ scores:{techDepth:5,implementationClarity:5,architectureAwareness:5,metricsAwareness:5,expression:5}, total:25, strengths:[], vague:['浅'], missingDetails:[], followUps:[], betterAnswer:'应…' }, nextQuestion:null })
+  const map = JSON.stringify({ projectName:'体验生判', background:'b', businessGoal:'g', techApproach:'t', personalContribution:'c', coreChallenges:[], alternatives:[], evaluation:'e', risks:[], optimizations:[], hotQuestions:[], blindSpots:['阈值'] })
+  let answers = 0
+  const handle = (system: string, prompt: string) => {
+    if (system.includes('简历解析器')) return parsed
+    if (prompt.includes('生成该项目的知识地图')) return map
+    if (prompt.includes('提出关于该项目的第一个深挖问题')) return firstQ
+    if (prompt.includes('请评分并决定下一步追问')) { answers++; return answers >= 2 ? stepEnd : stepGo }
+    return firstQ
+  }
+  return { async complete(o:any){ return handle(o.system ?? '', o.prompt) }, async *stream(o:any){ yield this.complete(o) },
+    startSession(){ return 'dd' }, async continueSession(_s:string, o:any){ return handle(o.system ?? '', o.prompt) } } as any
+}
+
+describe('deepdive routes', () => {
+  async function confirmed(app:any) {
+    const up = await request(app).post('/api/resumes').attach('file', Buffer.from('# r'), 'r.md')
+    await request(app).post(`/api/resumes/versions/${up.body.versionId}/confirm`)
+    return up.body.versionId
+  }
+  it('rejects start before confirm (409) and unknown project (400)', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, deepdiveAi())
+    const up = await request(app).post('/api/resumes').attach('file', Buffer.from('# r'), 'r.md')
+    expect((await request(app).post('/api/deepdives').send({ versionId: up.body.versionId, projectName:'体验生判' })).status).toBe(409)
+    const vid = await confirmed(app)
+    expect((await request(app).post('/api/deepdives').send({ versionId: vid, projectName:'不存在的项目' })).status).toBe(400)
+  })
+  it('runs a deepdive to a knowledge map', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, deepdiveAi())
+    const vid = await confirmed(app)
+    const start = await request(app).post('/api/deepdives').send({ versionId: vid, projectName:'体验生判', maxRounds:8 })
+    expect(start.status).toBe(200); expect(start.body.question).toBeTruthy()
+    const sid = start.body.sessionId
+    const a1 = await request(app).post(`/api/deepdives/${sid}/answer`).send({ answer:'用哈希' })
+    expect(a1.body.finished).toBe(false); expect(a1.body.feedback.total).toBe(30)
+    const a2 = await request(app).post(`/api/deepdives/${sid}/answer`).send({ answer:'不清楚' })
+    expect(a2.body.finished).toBe(true); expect(a2.body.map.blindSpots).toContain('阈值')
+    const got = await request(app).get(`/api/deepdives/${sid}`)
+    expect(got.body.session.status).toBe('finished')
+    expect((await request(app).get('/api/deepdives')).body.length).toBe(1)
+  })
+})
