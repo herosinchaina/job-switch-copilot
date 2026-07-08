@@ -88,4 +88,18 @@ export function migrate(db: DatabaseSync): void {
       score INTEGER, feedback_json TEXT, is_weak INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')));
   `)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS knowledge_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT NOT NULL, answer TEXT, reference TEXT,
+      tags TEXT NOT NULL DEFAULT '[]',
+      source TEXT NOT NULL, source_ref TEXT, note TEXT,
+      mastery INTEGER NOT NULL DEFAULT 0,
+      review_due TEXT NOT NULL, review_interval INTEGER NOT NULL DEFAULT 0,
+      review_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_ki_source_ref
+      ON knowledge_items(source, source_ref) WHERE source_ref IS NOT NULL;
+  `)
 }

@@ -1,4 +1,4 @@
-import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport, ProgressStatus, LcProblem, DeepdiveFeedback, ProjectMap } from '@aios/shared'
+import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport, ProgressStatus, LcProblem, DeepdiveFeedback, ProjectMap, KnowledgeItem, KnowledgeItemInput, ReviewGrade } from '@aios/shared'
 async function j<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts)
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
@@ -47,4 +47,21 @@ export const api = {
       `/api/deepdives/${sessionId}/answer`, json({ answer })),
   getDeepdive: (sessionId:number) => j<{session:any; turns:any[]}>(`/api/deepdives/${sessionId}`),
   listDeepdives: () => j<{id:number; projectName:string; status:'active'|'finished'; avgScore:number|null; createdAt:string}[]>('/api/deepdives'),
+  listKnowledge: (f: { source?:string; tag?:string; mastery?:number; q?:string } = {}) => {
+    const p = new URLSearchParams()
+    if (f.source) p.set('source', f.source)
+    if (f.tag) p.set('tag', f.tag)
+    if (typeof f.mastery === 'number') p.set('mastery', String(f.mastery))
+    if (f.q) p.set('q', f.q)
+    const qs = p.toString()
+    return j<KnowledgeItem[]>(`/api/knowledge${qs ? '?' + qs : ''}`)
+  },
+  createKnowledge: (input: KnowledgeItemInput) => j<KnowledgeItem>('/api/knowledge', json(input)),
+  getKnowledge: (id: number) => j<KnowledgeItem>(`/api/knowledge/${id}`),
+  updateKnowledge: (id: number, input: KnowledgeItemInput) => j<KnowledgeItem>(`/api/knowledge/${id}`, { ...json(input), method:'PUT' }),
+  deleteKnowledge: (id: number) => j<{ok:true}>(`/api/knowledge/${id}`, { method:'DELETE' }),
+  listDue: () => j<KnowledgeItem[]>('/api/knowledge/due'),
+  reviewKnowledge: (id: number, grade: ReviewGrade) => j<KnowledgeItem>(`/api/knowledge/${id}/review`, json({ grade })),
+  listKnowledgeTags: () => j<string[]>('/api/knowledge/tags'),
+  importKnowledge: (input: { from:'interview'|'deepdive'; sessionId:number }) => j<{imported:number;skipped:number}>('/api/knowledge/import', json(input)),
 }

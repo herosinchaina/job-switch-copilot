@@ -29,6 +29,18 @@ describe('MockInterview', () => {
     expect(getByText(/系统设计/)).toBeTruthy()   // weakness 渲染
   })
 
+  it('imports weak turns to knowledge base from the report', async () => {
+    vi.spyOn(api, 'importKnowledge').mockResolvedValue({ imported:2, skipped:1 } as any)
+    const { getByText, getByLabelText, findByText } = render(<MockInterview versionId={2} onBack={()=>{}} />)
+    fireEvent.click(getByText(/开始面试/))
+    await findByText(/请自我介绍/)
+    fireEvent.change(getByLabelText(/你的回答/), { target:{ value:'我是...' } })
+    fireEvent.click(getByText(/提交回答/))
+    await findByText(/面试报告/)
+    fireEvent.click(getByText(/存入知识库/))
+    await findByText(/已存入 2 条/)
+  })
+
   it('submits on Enter (without Shift)', async () => {
     const { getByText, getByLabelText, findByText } = render(<MockInterview versionId={2} onBack={()=>{}} />)
     fireEvent.click(getByText(/开始面试/))

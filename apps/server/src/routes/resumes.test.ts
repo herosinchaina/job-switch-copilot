@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { DatabaseSync } from 'node:sqlite'
 import { openDb, createJd } from '../db/repo'
+import { createResume, createVersion, createSession, createTurn, answerTurnRow } from '../db/repo'
 import { createApp } from '../index'
 import type { AiProvider } from '../ai/provider'
 
@@ -309,5 +310,48 @@ describe('deepdive routes', () => {
     const got = await request(app).get(`/api/deepdives/${sid}`)
     expect(got.body.session.status).toBe('finished')
     expect((await request(app).get('/api/deepdives')).body.length).toBe(1)
+  })
+})
+
+describe('knowledge routes', () => {
+  it('CRUD + review + due + tags', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, {} as any)
+    // create
+    const c = await request(app).post('/api/knowledge').send({ question:'RAG 召回?', tags:['ai'] })
+    expect(c.status).toBe(200); const id = c.body.id
+    expect(c.body.source).toBe('manual')
+    // list + filter
+    expect((await request(app).get('/api/knowledge?tag=ai')).body.length).toBe(1)
+    expect((await request(app).get('/api/knowledge?q=召回')).body.length).toBe(1)
+    // tags 不被 :id 吞
+    expect((await request(app).get('/api/knowledge/tags')).body).toContain('ai')
+    // due:新建即今天到期
+    expect((await request(app).get('/api/knowledge/due')).body.map((x:any)=>x.id)).toContain(id)
+    // review remembered → 移出今日到期
+    const rv = await request(app).post(`/api/knowledge/${id}/review`).send({ grade:'remembered' })
+    expect(rv.body.reviewCount).toBe(1)
+    expect((await request(app).get('/api/knowledge/due')).body.map((x:any)=>x.id)).not.toContain(id)
+    // update
+    await request(app).put(`/api/knowledge/${id}`).send({ question:'RAG 召回优化?', tags:['ai','rag'] })
+    expect((await request(app).get(`/api/knowledge/${id}`)).body.question).toBe('RAG 召回优化?')
+    // 404s
+    expect((await request(app).get('/api/knowledge/9999')).status).toBe(404)
+    // delete
+    expect((await request(app).delete(`/api/knowledge/${id}`)).body.ok).toBe(true)
+    expect((await request(app).get(`/api/knowledge/${id}`)).status).toBe(404)
+  })
+  it('imports is_weak turns from an interview session with dedupe', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, {} as any)
+    // 直接用 repo 造一个含 is_weak turn 的 interview session
+    const rid = createResume(db, { title:'r', sourceFormat:'md', rawText:'x' })
+    const vid = createVersion(db, { resumeId:rid, kind:'original', parentVersionId:null,
+      structured:{ basics:{name:'A',title:'T',contact:'c',summary:''}, education:[],work:[],projects:[],skills:[],awards:[] }, status:'confirmed' })
+    const sid = createSession(db, { resumeVersionId:vid, jobDescriptionId:null, cliSessionId:null, role:'x', roundType:'tech', maxRounds:6 })
+    const t = createTurn(db, { sessionId:sid, turnIndex:0, question:'弱题?' })
+    answerTurnRow(db, t, { answer:'不会', score:20, feedback:{ score:20, highlights:[], gaps:['浅'], better:'应当…' } })
+    const imp = await request(app).post('/api/knowledge/import').send({ from:'interview', sessionId:sid })
+    expect(imp.body).toEqual({ imported:1, skipped:0 })
+    const again = await request(app).post('/api/knowledge/import').send({ from:'interview', sessionId:sid })
+    expect(again.body).toEqual({ imported:0, skipped:1 })  // 去重
   })
 })
