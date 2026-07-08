@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { migrate } from './connection'
-import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, ProjectMapSchema, DeepdiveFeedbackSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType, type LcProblem, type ProgressStatus, type ProjectMap, type DeepdiveFeedback } from '@aios/shared'
+import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, ProjectMapSchema, DeepdiveFeedbackSchema, KnowledgeItemSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType, type LcProblem, type ProgressStatus, type ProjectMap, type DeepdiveFeedback, type KnowledgeItem, type KnowledgeItemInput, type KnowledgeSource, type ReviewGrade } from '@aios/shared'
 export { seedProblems } from './seed'
 
 export function openDb(file: string): DatabaseSync {
@@ -64,7 +64,8 @@ export function exportAll(db: DatabaseSync) {
     lcGuideSessions: db.prepare('SELECT * FROM lc_guide_sessions').all(),
     lcGuideTurns: db.prepare('SELECT * FROM lc_guide_turns').all(),
     deepdiveSessions: db.prepare('SELECT * FROM project_deepdive_sessions').all(),
-    deepdiveTurns: db.prepare('SELECT * FROM project_deepdive_turns').all() }
+    deepdiveTurns: db.prepare('SELECT * FROM project_deepdive_turns').all(),
+    knowledgeItems: db.prepare('SELECT * FROM knowledge_items').all() }
 }
 export function createKit(db: DatabaseSync, k: { resumeVersionId:number; jobDescriptionId:number|null; kit:InterviewKit }): number {
   return Number(db.prepare('INSERT INTO interview_kits (resume_version_id,job_description_id,kit_json) VALUES (?,?,?)')
@@ -208,4 +209,97 @@ export function listDeepdiveSessions(db: DatabaseSync) {
     const avgScore = scored.length ? Math.round(scored.reduce((s, x) => s + x.score, 0) / scored.length) : null
     return { id: r.id, projectName: r.project_name, status: r.status as 'active'|'finished', avgScore, createdAt: r.created_at as string }
   })
+}
+
+// ── 知识库(模块三) ──────────────────────────────────────────
+const INTERVALS = [1, 2, 4, 7, 15, 30]
+
+function rowToKnowledgeItem(r: any): KnowledgeItem {
+  return KnowledgeItemSchema.parse({
+    id: r.id, question: r.question, answer: r.answer ?? null, reference: r.reference ?? null,
+    tags: JSON.parse(r.tags ?? '[]'), source: r.source, sourceRef: r.source_ref ?? null,
+    note: r.note ?? null, mastery: r.mastery, reviewDue: r.review_due,
+    reviewInterval: r.review_interval, reviewCount: r.review_count,
+    createdAt: r.created_at, updatedAt: r.updated_at,
+  })
+}
+
+export function createKnowledgeItem(db: DatabaseSync, input: KnowledgeItemInput & { source: KnowledgeSource; sourceRef: string | null }): number {
+  return Number(db.prepare(`INSERT INTO knowledge_items
+    (question,answer,reference,tags,source,source_ref,note,review_due,review_interval,review_count)
+    VALUES (?,?,?,?,?,?,?, date('now','localtime'), 0, 0)`)
+    .run(input.question, input.answer, input.reference, JSON.stringify(input.tags ?? []),
+      input.source, input.sourceRef, input.note).lastInsertRowid)
+}
+
+export function importWeakItem(db: DatabaseSync, w: { source: KnowledgeSource; sourceRef: string; question: string; answer: string | null; reference: string | null }): number | null {
+  const res = db.prepare(`INSERT OR IGNORE INTO knowledge_items
+    (question,answer,reference,tags,source,source_ref,note,review_due,review_interval,review_count)
+    VALUES (?,?,?, '[]', ?,?, NULL, date('now','localtime'), 0, 0)`)
+    .run(w.question, w.answer, w.reference, w.source, w.sourceRef)
+  return res.changes ? Number(res.lastInsertRowid) : null
+}
+
+export function getKnowledgeItem(db: DatabaseSync, id: number): KnowledgeItem | undefined {
+  const r = db.prepare('SELECT * FROM knowledge_items WHERE id=?').get(id) as any
+  return r ? rowToKnowledgeItem(r) : undefined
+}
+
+export function updateKnowledgeItem(db: DatabaseSync, id: number, input: KnowledgeItemInput): void {
+  db.prepare(`UPDATE knowledge_items SET question=?, answer=?, reference=?, tags=?, note=?, updated_at=datetime('now') WHERE id=?`)
+    .run(input.question, input.answer, input.reference, JSON.stringify(input.tags ?? []), input.note, id)
+}
+
+export function deleteKnowledgeItem(db: DatabaseSync, id: number): void {
+  db.prepare('DELETE FROM knowledge_items WHERE id=?').run(id)
+}
+
+export function listKnowledgeItems(db: DatabaseSync, f: { source?: string; tag?: string; mastery?: number; q?: string }): KnowledgeItem[] {
+  const where: string[] = []; const params: any[] = []
+  if (f.source) { where.push('source=?'); params.push(f.source) }
+  if (typeof f.mastery === 'number') { where.push('mastery=?'); params.push(f.mastery) }
+  if (f.q) { where.push('(question LIKE ? OR answer LIKE ? OR reference LIKE ? OR note LIKE ?)')
+    const like = `%${f.q}%`; params.push(like, like, like, like) }
+  // tags 存为 JSON 数组;用带引号的完整标签匹配(%"ai"% 不会误中 "air")
+  if (f.tag) { where.push('tags LIKE ?'); params.push(`%${JSON.stringify(f.tag)}%`) }
+  const sql = `SELECT * FROM knowledge_items ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY updated_at DESC`
+  return (db.prepare(sql).all(...params) as any[]).map(rowToKnowledgeItem)
+}
+
+export function listDueItems(db: DatabaseSync): KnowledgeItem[] {
+  const rows = db.prepare(`SELECT * FROM knowledge_items WHERE date(review_due) <= date('now','localtime') ORDER BY review_due ASC`).all() as any[]
+  return rows.map(rowToKnowledgeItem)
+}
+
+export function reviewKnowledgeItem(db: DatabaseSync, id: number, grade: ReviewGrade): KnowledgeItem {
+  return transaction(db, () => {
+    const cur = getKnowledgeItem(db, id)
+    if (!cur) throw new Error('knowledge item not found')
+    if (grade === 'remembered') {
+      const count = cur.reviewCount + 1
+      const interval = INTERVALS[Math.min(count, INTERVALS.length - 1)]
+      db.prepare(`UPDATE knowledge_items SET review_count=?, review_interval=?, mastery=?,
+        review_due=date('now','localtime','+' || ? || ' days'), updated_at=datetime('now') WHERE id=?`)
+        .run(count, interval, Math.min(5, cur.mastery + 1), interval, id)
+    } else {
+      db.prepare(`UPDATE knowledge_items SET review_count=0, review_interval=1, mastery=?,
+        review_due=date('now','localtime','+1 days'), updated_at=datetime('now') WHERE id=?`)
+        .run(Math.max(0, cur.mastery - 1), id)
+    }
+    return getKnowledgeItem(db, id)!
+  })
+}
+
+export function listAllTags(db: DatabaseSync): string[] {
+  const rows = db.prepare('SELECT tags FROM knowledge_items').all() as any[]
+  const set = new Set<string>()
+  for (const r of rows) for (const t of JSON.parse(r.tags ?? '[]')) set.add(t)
+  return [...set]
+}
+
+export function knowledgeStats(db: DatabaseSync) {
+  const total = (db.prepare('SELECT COUNT(*) c FROM knowledge_items').get() as any).c
+  const due = (db.prepare(`SELECT COUNT(*) c FROM knowledge_items WHERE date(review_due) <= date('now','localtime')`).get() as any).c
+  const mastered = (db.prepare('SELECT COUNT(*) c FROM knowledge_items WHERE mastery>=5').get() as any).c
+  return { total, due, mastered }
 }

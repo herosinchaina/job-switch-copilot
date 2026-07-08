@@ -5,6 +5,8 @@ import { createKit, getKit } from './repo'
 import { createSession, getSession, finishSession, createTurn, answerTurnRow, listTurns } from './repo'
 import { seedProblems, listProblems, getProblem, setProgress, progressSummary,
   createGuideSession, getGuideSession, finishGuideSession, createGuideTurn, answerGuideTurn, listGuideTurns } from './repo'
+import { createKnowledgeItem, importWeakItem, getKnowledgeItem, updateKnowledgeItem,
+  deleteKnowledgeItem, listKnowledgeItems, listDueItems, reviewKnowledgeItem, listAllTags } from './repo'
 
 let db: DatabaseSync
 beforeEach(() => { db = openDb(':memory:') })
@@ -167,5 +169,60 @@ describe('deepdive repo', () => {
     expect(getDeepdiveSession(db, sid)!.status).toBe('finished')
     expect(getDeepdiveSession(db, sid)!.map!.blindSpots[0]).toBe('阈值')
     expect(listDeepdiveSessions(db).length).toBe(1)
+  })
+})
+
+describe('knowledge repo', () => {
+  it('create → get round-trip, tags preserved', () => {
+    const db = openDb(':memory:')
+    const id = createKnowledgeItem(db, { question:'Q', answer:'a', reference:'r', tags:['ai','rag'], note:null, source:'manual', sourceRef:null })
+    const item = getKnowledgeItem(db, id)!
+    expect(item.question).toBe('Q'); expect(item.tags).toEqual(['ai','rag'])
+    expect(item.source).toBe('manual'); expect(item.mastery).toBe(0)
+  })
+  it('importWeakItem dedupes by (source, source_ref)', () => {
+    const db = openDb(':memory:')
+    const a = importWeakItem(db, { source:'interview', sourceRef:'42', question:'Q', answer:'a', reference:'ref' })
+    const b = importWeakItem(db, { source:'interview', sourceRef:'42', question:'Q', answer:'a', reference:'ref' })
+    expect(a).not.toBeNull(); expect(b).toBeNull()
+    expect(listKnowledgeItems(db, {}).length).toBe(1)
+  })
+  it('filters by source/tag/mastery and q (LIKE)', () => {
+    const db = openDb(':memory:')
+    createKnowledgeItem(db, { question:'RAG 召回', answer:null, reference:null, tags:['ai'], note:null, source:'manual', sourceRef:null })
+    createKnowledgeItem(db, { question:'排序算法', answer:null, reference:null, tags:['algo'], note:null, source:'manual', sourceRef:null })
+    expect(listKnowledgeItems(db, { tag:'ai' }).length).toBe(1)
+    expect(listKnowledgeItems(db, { q:'召回' }).length).toBe(1)
+  })
+  it('tag filter does not match substrings (ai must not match air)', () => {
+    const db = openDb(':memory:')
+    createKnowledgeItem(db, { question:'Q1', answer:null, reference:null, tags:['air'], note:null, source:'manual', sourceRef:null })
+    expect(listKnowledgeItems(db, { tag:'ai' }).length).toBe(0)
+  })
+  it('listDueItems: due=today matches, due=tomorrow does not', () => {
+    const db = openDb(':memory:')
+    const id = createKnowledgeItem(db, { question:'Q', answer:null, reference:null, tags:[], note:null, source:'manual', sourceRef:null })
+    expect(listDueItems(db).map(i=>i.id)).toContain(id)   // 新建即今天到期
+    reviewKnowledgeItem(db, id, 'remembered')              // due 推到未来
+    expect(listDueItems(db).map(i=>i.id)).not.toContain(id)
+  })
+  it('reviewKnowledgeItem: remembered advances, forgot resets', () => {
+    const db = openDb(':memory:')
+    const id = createKnowledgeItem(db, { question:'Q', answer:null, reference:null, tags:[], note:null, source:'manual', sourceRef:null })
+    let it = reviewKnowledgeItem(db, id, 'remembered')
+    expect(it.reviewCount).toBe(1); expect(it.reviewInterval).toBe(2); expect(it.mastery).toBe(1)
+    it = reviewKnowledgeItem(db, id, 'forgot')
+    expect(it.reviewCount).toBe(0); expect(it.reviewInterval).toBe(1); expect(it.mastery).toBe(0)
+  })
+  it('update leaves review fields untouched; delete removes; listAllTags dedupes', () => {
+    const db = openDb(':memory:')
+    const id = createKnowledgeItem(db, { question:'Q', answer:null, reference:null, tags:['ai'], note:null, source:'manual', sourceRef:null })
+    reviewKnowledgeItem(db, id, 'remembered')
+    updateKnowledgeItem(db, id, { question:'Q2', answer:'a', reference:null, tags:['ai','x'], note:'n' })
+    const it = getKnowledgeItem(db, id)!
+    expect(it.question).toBe('Q2'); expect(it.reviewCount).toBe(1)  // 复习字段不被 update 重置
+    expect(listAllTags(db).sort()).toEqual(['ai','x'])
+    deleteKnowledgeItem(db, id)
+    expect(getKnowledgeItem(db, id)).toBeUndefined()
   })
 })
