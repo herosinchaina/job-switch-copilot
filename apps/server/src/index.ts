@@ -14,6 +14,7 @@ import { interviewsRouter } from './routes/interviews'
 import { exportRouter } from './routes/export'
 import { leetcodeRouter } from './routes/leetcode'
 import { deepdiveRouter } from './routes/deepdive'
+import { knowledgeRouter } from './routes/knowledge'
 import { seedProblems } from './db/seed'
 import { errorHandler } from './middleware/error'
 
@@ -31,6 +32,7 @@ export function createApp(db: DatabaseSync, ai: AiProvider, guideAi: AiProvider 
   app.use('/api', exportRouter(db))
   app.use('/api', leetcodeRouter(db, ai, guideAi))
   app.use('/api', deepdiveRouter(db, ai))
+  app.use('/api', knowledgeRouter(db))
   app.use(errorHandler)
   return app
 }
