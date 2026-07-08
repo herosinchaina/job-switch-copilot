@@ -21,6 +21,8 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
   const [report, setReport] = useState<InterviewReport | null>(null)
   const [history, setHistory] = useState<SessionSummary[]>([])
   const [reviewMsgs, setReviewMsgs] = useState<Msg[]>([])
+  const [importMsg, setImportMsg] = useState('')
+  const [importing, setImporting] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
 
   // 进入配置页时加载历史面试列表
@@ -81,6 +83,15 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
       e.preventDefault()
       if (!busy) submit()
     }
+  }
+
+  async function doImport() {
+    if (sessionId == null) return
+    setImporting(true); setImportMsg('')
+    try {
+      const r = await api.importKnowledge({ from: 'interview', sessionId })
+      setImportMsg(`已存入 ${r.imported} 条${r.skipped ? `(${r.skipped} 条已存在)` : ''}`)
+    } catch (e: any) { setImportMsg(`导入失败:${e.message}`) } finally { setImporting(false) }
   }
 
   const Back = () => (
@@ -179,6 +190,14 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
           {report.nextSteps.length > 0 && (
             <Card className="p-5"><h3 className="mb-2 text-sm font-semibold text-text">下一步训练建议</h3>
               <ul className="list-disc space-y-0.5 pl-4 text-sm text-muted">{report.nextSteps.map((s,i)=><li key={i}>{s}</li>)}</ul></Card>
+          )}
+          {sessionId != null && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="secondary" onClick={doImport} disabled={importing}>
+                {importing ? <Loader2 size={15} className="animate-spin" /> : null} 存入知识库
+              </Button>
+              {importMsg && <p className="text-sm text-muted">{importMsg}</p>}
+            </div>
           )}
         </>) : (
           <p className="text-sm text-muted">这场面试尚未完成,暂无报告。</p>

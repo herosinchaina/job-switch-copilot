@@ -18,6 +18,8 @@ export function ProjectDeepdive({ versionId, structured, onBack }: { versionId: 
   const [error, setError] = useState('')
   const [map, setMap] = useState<ProjectMap | null>(null)
   const [weakTurns, setWeakTurns] = useState<{ question:string; total:number; betterAnswer:string }[]>([])
+  const [importMsg, setImportMsg] = useState('')
+  const [importing, setImporting] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -51,6 +53,15 @@ export function ProjectDeepdive({ versionId, structured, onBack }: { versionId: 
     } catch (e: any) { setError(e.message) } finally { setBusy(false) }
   }
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) { if (e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); if(!busy) submit() } }
+
+  async function doImport() {
+    if (sessionId == null) return
+    setImporting(true); setImportMsg('')
+    try {
+      const r = await api.importKnowledge({ from: 'deepdive', sessionId })
+      setImportMsg(`已存入 ${r.imported} 条${r.skipped ? `(${r.skipped} 条已存在)` : ''}`)
+    } catch (e: any) { setImportMsg(`导入失败:${e.message}`) } finally { setImporting(false) }
+  }
 
   const Back = () => (
     <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={15} /> 返回</button>
@@ -115,6 +126,14 @@ export function ProjectDeepdive({ versionId, structured, onBack }: { versionId: 
               </div>
             ))}
           </Card>
+        )}
+        {sessionId != null && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="secondary" onClick={doImport} disabled={importing}>
+              {importing ? <Loader2 size={15} className="animate-spin" /> : null} 存入知识库
+            </Button>
+            {importMsg && <p className="text-sm text-muted">{importMsg}</p>}
+          </div>
         )}
       </div>
     )
