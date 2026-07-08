@@ -10,12 +10,13 @@ import { Leetcode } from './pages/Leetcode'
 import { LcGuide } from './pages/LcGuide'
 import { Dashboard } from './pages/Dashboard'
 import { ProjectDeepdive } from './pages/ProjectDeepdive'
-import { LayoutDashboard, FileText, Download, Moon, Sun, Sparkles, ChevronLeft, MessagesSquare, Code2, Layers } from 'lucide-react'
+import { KnowledgeBase } from './pages/KnowledgeBase'
+import { LayoutDashboard, FileText, Download, Moon, Sun, Sparkles, ChevronLeft, MessagesSquare, Code2, Layers, BookMarked } from 'lucide-react'
 import type { Review, StructuredResume } from '@aios/shared'
 
 export default function App() {
   const { dark, toggle } = useTheme()
-  const [view, setView] = useState<'dashboard' | 'resume' | 'interview' | 'leetcode' | 'deepdive'>('resume')
+  const [view, setView] = useState<'dashboard' | 'resume' | 'interview' | 'leetcode' | 'deepdive' | 'knowledge'>('resume')
   const [confirmedVersion, setConfirmedVersion] = useState<number | null>(null)
   const [confirmedStructured, setConfirmedStructured] = useState<StructuredResume | null>(null)
   const [optimizeSuggestions, setOptimizeSuggestions] = useState<Review['suggestions'] | null>(null)
@@ -34,6 +35,7 @@ export default function App() {
     { id: 'resume' as const, label: '简历大师', icon: FileText },
     { id: 'interview' as const, label: '模拟面试', icon: MessagesSquare },
     { id: 'deepdive' as const, label: '项目深挖', icon: Layers },
+    { id: 'knowledge' as const, label: '知识库', icon: BookMarked },
     { id: 'leetcode' as const, label: '算法学习', icon: Code2 },
   ]
 
@@ -86,6 +88,8 @@ export default function App() {
       <main className="mx-auto max-w-6xl px-6 py-8">
         {view === 'dashboard' ? (
           <Dashboard />
+        ) : view === 'knowledge' ? (
+          <KnowledgeBase />
         ) : view === 'leetcode' ? (
           guideFor !== null ? (
             <LcGuide leetcodeId={guideFor} onBack={() => setGuideFor(null)} />
