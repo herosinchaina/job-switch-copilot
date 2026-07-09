@@ -340,6 +340,12 @@ describe('knowledge routes', () => {
     expect((await request(app).delete(`/api/knowledge/${id}`)).body.ok).toBe(true)
     expect((await request(app).get(`/api/knowledge/${id}`)).status).toBe(404)
   })
+  it('rejects invalid input with 400 (empty question, bad grade)', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, {} as any)
+    expect((await request(app).post('/api/knowledge').send({ question:'' })).status).toBe(400)
+    const c = await request(app).post('/api/knowledge').send({ question:'Q' })
+    expect((await request(app).post(`/api/knowledge/${c.body.id}/review`).send({ grade:'wat' })).status).toBe(400)
+  })
   it('imports is_weak turns from an interview session with dedupe', async () => {
     const db = openDb(':memory:'); const app = createApp(db, {} as any)
     // 直接用 repo 造一个含 is_weak turn 的 interview session
