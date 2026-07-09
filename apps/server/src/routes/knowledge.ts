@@ -11,10 +11,12 @@ export function knowledgeRouter(db: DatabaseSync) {
 
   r.get('/knowledge', (req, res) => {
     const q = req.query
+    // mastery 仅在能解析为有限数字时才作为过滤条件,避免 NaN 拼进 SQL 恒返回空集
+    const masteryNum = q.mastery !== undefined ? Number(q.mastery) : NaN
     res.json(listKnowledgeItems(db, {
       source: q.source ? String(q.source) : undefined,
       tag: q.tag ? String(q.tag) : undefined,
-      mastery: q.mastery !== undefined ? Number(q.mastery) : undefined,
+      mastery: Number.isFinite(masteryNum) ? masteryNum : undefined,
       q: q.q ? String(q.q) : undefined,
     }))
   })
@@ -36,6 +38,7 @@ export function knowledgeRouter(db: DatabaseSync) {
       const from = String(req.body.from)
       const sessionId = Number(req.body.sessionId)
       if (from !== 'interview' && from !== 'deepdive') throw new HttpError(400, 'from 非法')
+      if (!Number.isInteger(sessionId) || sessionId <= 0) throw new HttpError(400, 'sessionId 非法')
       const turns = from === 'interview' ? listTurns(db, sessionId) : listDeepdiveTurns(db, sessionId)
       const weak = turns.filter((t: any) => t.isWeak && t.answer !== null)
       let imported = 0, skipped = 0

@@ -346,6 +346,19 @@ describe('knowledge routes', () => {
     const c = await request(app).post('/api/knowledge').send({ question:'Q' })
     expect((await request(app).post(`/api/knowledge/${c.body.id}/review`).send({ grade:'wat' })).status).toBe(400)
   })
+  it('ignores a non-numeric mastery filter instead of returning empty', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, {} as any)
+    await request(app).post('/api/knowledge').send({ question:'Q1' })
+    await request(app).post('/api/knowledge').send({ question:'Q2' })
+    // mastery=abc → NaN;应被忽略,返回全部,而非拼进 SQL 恒空
+    expect((await request(app).get('/api/knowledge?mastery=abc')).body.length).toBe(2)
+    // mastery=0 → 有效过滤(新建条目 mastery 都为 0)
+    expect((await request(app).get('/api/knowledge?mastery=0')).body.length).toBe(2)
+  })
+  it('rejects import with a bad sessionId (400, not a silent empty result)', async () => {
+    const db = openDb(':memory:'); const app = createApp(db, {} as any)
+    expect((await request(app).post('/api/knowledge/import').send({ from:'interview', sessionId:'abc' })).status).toBe(400)
+  })
   it('imports is_weak turns from an interview session with dedupe', async () => {
     const db = openDb(':memory:'); const app = createApp(db, {} as any)
     // 直接用 repo 造一个含 is_weak turn 的 interview session
