@@ -1,4 +1,4 @@
-import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport, ProgressStatus, LcProblem, DeepdiveFeedback, ProjectMap, KnowledgeItem, KnowledgeItemInput, ReviewGrade } from '@aios/shared'
+import type { StructuredResume, Review, JobDescription, InterviewKit, RoundType, TurnFeedback, InterviewReport, ProgressStatus, LcProblem, DeepdiveFeedback, ProjectMap, KnowledgeItem, KnowledgeItemInput, ReviewGrade, KnowledgeAttempt, KnowledgeAttemptFeedback } from '@aios/shared'
 async function j<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts)
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
@@ -64,4 +64,15 @@ export const api = {
   reviewKnowledge: (id: number, grade: ReviewGrade) => j<KnowledgeItem>(`/api/knowledge/${id}/review`, json({ grade })),
   listKnowledgeTags: () => j<string[]>('/api/knowledge/tags'),
   importKnowledge: (input: { from:'interview'|'deepdive'; sessionId:number }) => j<{imported:number;skipped:number}>('/api/knowledge/import', json(input)),
+  listErrorBook: (f: { status?:'pending'|'conquered'; source?:string; tag?:string } = {}) => {
+    const p = new URLSearchParams()
+    if (f.status) p.set('status', f.status)
+    if (f.source) p.set('source', f.source)
+    if (f.tag) p.set('tag', f.tag)
+    const qs = p.toString()
+    return j<(KnowledgeItem & { attemptCount:number })[]>(`/api/error-book${qs ? '?' + qs : ''}`)
+  },
+  errorBookStats: () => j<{ total:number; pending:number; conquered:number; bySource:{source:string;count:number}[]; byTag:{tag:string;count:number}[]; conqueredLast7Days:number }>('/api/error-book/stats'),
+  listAttempts: (id:number) => j<KnowledgeAttempt[]>(`/api/error-book/items/${id}/attempts`),
+  submitAttempt: (id:number, answer:string) => j<{ feedback:KnowledgeAttemptFeedback; conquered:boolean; attempt:KnowledgeAttempt }>(`/api/error-book/items/${id}/attempt`, json({ answer })),
 }

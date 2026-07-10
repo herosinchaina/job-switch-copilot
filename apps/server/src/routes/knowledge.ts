@@ -41,11 +41,13 @@ export function knowledgeRouter(db: DatabaseSync) {
       if (!Number.isInteger(sessionId) || sessionId <= 0) throw new HttpError(400, 'sessionId 非法')
       const turns = from === 'interview' ? listTurns(db, sessionId) : listDeepdiveTurns(db, sessionId)
       const weak = turns.filter((t: any) => t.isWeak && t.answer !== null)
+      // 导入时自动打来源标签,让错题本「洞察」薄弱分布开箱有数据
+      const autoTag = from === 'interview' ? '模拟面试' : '项目深挖'
       let imported = 0, skipped = 0
       transaction(db, () => {
         for (const t of weak as any[]) {
           const reference = from === 'interview' ? (t.feedback?.better ?? null) : (t.feedback?.betterAnswer ?? null)
-          const id = importWeakItem(db, { source: from, sourceRef: String(t.id), question: t.question, answer: t.answer, reference })
+          const id = importWeakItem(db, { source: from, sourceRef: String(t.id), question: t.question, answer: t.answer, reference, tags: [autoTag] })
           if (id === null) skipped++; else imported++
         }
       })

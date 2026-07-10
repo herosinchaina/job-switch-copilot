@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { migrate } from './connection'
-import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, ProjectMapSchema, DeepdiveFeedbackSchema, KnowledgeItemSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType, type LcProblem, type ProgressStatus, type ProjectMap, type DeepdiveFeedback, type KnowledgeItem, type KnowledgeItemInput, type KnowledgeSource, type ReviewGrade } from '@aios/shared'
+import { StructuredResumeSchema, JobDescriptionSchema, InterviewKitSchema, InterviewReportSchema, TurnFeedbackSchema, ProjectMapSchema, DeepdiveFeedbackSchema, KnowledgeItemSchema, type StructuredResume, type Review, type JobDescription, type GapAnalysis, type InterviewKit, type InterviewReport, type TurnFeedback, type RoundType, type LcProblem, type ProgressStatus, type ProjectMap, type DeepdiveFeedback, type KnowledgeItem, type KnowledgeItemInput, type KnowledgeSource, type ReviewGrade, type KnowledgeAttempt, type KnowledgeAttemptFeedback } from '@aios/shared'
 export { seedProblems } from './seed'
 
 export function openDb(file: string): DatabaseSync {
@@ -65,7 +65,8 @@ export function exportAll(db: DatabaseSync) {
     lcGuideTurns: db.prepare('SELECT * FROM lc_guide_turns').all(),
     deepdiveSessions: db.prepare('SELECT * FROM project_deepdive_sessions').all(),
     deepdiveTurns: db.prepare('SELECT * FROM project_deepdive_turns').all(),
-    knowledgeItems: db.prepare('SELECT * FROM knowledge_items').all() }
+    knowledgeItems: db.prepare('SELECT * FROM knowledge_items').all(),
+    knowledgeAttempts: db.prepare('SELECT * FROM knowledge_attempts').all() }
 }
 export function createKit(db: DatabaseSync, k: { resumeVersionId:number; jobDescriptionId:number|null; kit:InterviewKit }): number {
   return Number(db.prepare('INSERT INTO interview_kits (resume_version_id,job_description_id,kit_json) VALUES (?,?,?)')
@@ -221,6 +222,7 @@ function rowToKnowledgeItem(r: any): KnowledgeItem {
     note: r.note ?? null, mastery: r.mastery, reviewDue: r.review_due,
     reviewInterval: r.review_interval, reviewCount: r.review_count,
     createdAt: r.created_at, updatedAt: r.updated_at,
+    conqueredAt: r.conquered_at ?? null,
   })
 }
 
@@ -232,11 +234,11 @@ export function createKnowledgeItem(db: DatabaseSync, input: KnowledgeItemInput 
       input.source, input.sourceRef, input.note).lastInsertRowid)
 }
 
-export function importWeakItem(db: DatabaseSync, w: { source: KnowledgeSource; sourceRef: string; question: string; answer: string | null; reference: string | null }): number | null {
+export function importWeakItem(db: DatabaseSync, w: { source: KnowledgeSource; sourceRef: string; question: string; answer: string | null; reference: string | null; tags?: string[] }): number | null {
   const res = db.prepare(`INSERT OR IGNORE INTO knowledge_items
     (question,answer,reference,tags,source,source_ref,note,review_due,review_interval,review_count)
-    VALUES (?,?,?, '[]', ?,?, NULL, date('now','localtime'), 0, 0)`)
-    .run(w.question, w.answer, w.reference, w.source, w.sourceRef)
+    VALUES (?,?,?, ?, ?,?, NULL, date('now','localtime'), 0, 0)`)
+    .run(w.question, w.answer, w.reference, JSON.stringify(w.tags ?? []), w.source, w.sourceRef)
   return res.changes ? Number(res.lastInsertRowid) : null
 }
 
@@ -302,4 +304,62 @@ export function knowledgeStats(db: DatabaseSync) {
   const due = (db.prepare(`SELECT COUNT(*) c FROM knowledge_items WHERE date(review_due) <= date('now','localtime')`).get() as any).c
   const mastered = (db.prepare('SELECT COUNT(*) c FROM knowledge_items WHERE mastery>=5').get() as any).c
   return { total, due, mastered }
+}
+
+// ── 错题本(模块六) ──────────────────────────────────────────
+function rowToAttempt(r: any): KnowledgeAttempt {
+  return { id: r.id, itemId: r.item_id, answer: r.answer, score: r.score,
+    feedback: JSON.parse(r.feedback_json) as KnowledgeAttemptFeedback, createdAt: r.created_at }
+}
+
+export function createAttempt(db: DatabaseSync, a: { itemId: number; answer: string; feedback: KnowledgeAttemptFeedback }): { attempt: KnowledgeAttempt; conquered: boolean } {
+  return transaction(db, () => {
+    const id = Number(db.prepare('INSERT INTO knowledge_attempts (item_id,answer,score,feedback_json) VALUES (?,?,?,?)')
+      .run(a.itemId, a.answer, a.feedback.score, JSON.stringify(a.feedback)).lastInsertRowid)
+    let conquered = false
+    if (a.feedback.verdict === 'pass') {
+      const cur = db.prepare('SELECT conquered_at FROM knowledge_items WHERE id=?').get(a.itemId) as any
+      if (cur && cur.conquered_at == null) {
+        db.prepare(`UPDATE knowledge_items SET conquered_at=datetime('now'), updated_at=datetime('now') WHERE id=?`).run(a.itemId)
+        conquered = true
+      }
+    }
+    const attempt = rowToAttempt(db.prepare('SELECT * FROM knowledge_attempts WHERE id=?').get(id))
+    return { attempt, conquered }
+  })
+}
+
+export function listAttempts(db: DatabaseSync, itemId: number): KnowledgeAttempt[] {
+  return (db.prepare('SELECT * FROM knowledge_attempts WHERE item_id=? ORDER BY id DESC').all(itemId) as any[]).map(rowToAttempt)
+}
+
+export function listBookItems(db: DatabaseSync, f: { status?: 'pending' | 'conquered'; source?: string; tag?: string }): (KnowledgeItem & { attemptCount: number })[] {
+  const where: string[] = [`source IN ('interview','deepdive')`]
+  const params: any[] = []
+  where.push(f.status === 'conquered' ? 'conquered_at IS NOT NULL' : 'conquered_at IS NULL')
+  if (f.source === 'interview' || f.source === 'deepdive') { where.push('source=?'); params.push(f.source) }
+  if (f.tag) { where.push('tags LIKE ?'); params.push(`%${JSON.stringify(f.tag)}%`) }
+  const rows = db.prepare(`SELECT * FROM knowledge_items WHERE ${where.join(' AND ')} ORDER BY updated_at DESC`).all(...params) as any[]
+  return rows.map(r => {
+    const c = (db.prepare('SELECT COUNT(*) c FROM knowledge_attempts WHERE item_id=?').get(r.id) as any).c
+    return { ...rowToKnowledgeItem(r), attemptCount: Number(c) }
+  })
+}
+
+export function bookStats(db: DatabaseSync) {
+  const scope = `source IN ('interview','deepdive')`
+  const total = (db.prepare(`SELECT COUNT(*) c FROM knowledge_items WHERE ${scope}`).get() as any).c
+  const conquered = (db.prepare(`SELECT COUNT(*) c FROM knowledge_items WHERE ${scope} AND conquered_at IS NOT NULL`).get() as any).c
+  const pending = total - conquered
+  const bySourceRows = db.prepare(`SELECT source, COUNT(*) c FROM knowledge_items WHERE ${scope} GROUP BY source`).all() as any[]
+  const bySource = bySourceRows.map(r => ({ source: r.source as string, count: Number(r.c) }))
+  const conqueredLast7Days = (db.prepare(
+    `SELECT COUNT(*) c FROM knowledge_items WHERE ${scope} AND conquered_at IS NOT NULL AND date(conquered_at) >= date('now','localtime','-6 days')`
+  ).get() as any).c
+  // byTag:仅统计未攻克(薄弱)条目
+  const weakRows = db.prepare(`SELECT tags FROM knowledge_items WHERE ${scope} AND conquered_at IS NULL`).all() as any[]
+  const tagCount = new Map<string, number>()
+  for (const r of weakRows) for (const t of JSON.parse(r.tags ?? '[]')) tagCount.set(t, (tagCount.get(t) ?? 0) + 1)
+  const byTag = [...tagCount.entries()].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count)
+  return { total, pending, conquered, bySource, byTag, conqueredLast7Days: Number(conqueredLast7Days) }
 }

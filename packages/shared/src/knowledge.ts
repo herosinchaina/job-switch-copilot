@@ -27,8 +27,38 @@ export const KnowledgeItemSchema = z.object({
   reviewCount: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  conqueredAt: z.string().nullable(),
 })
 export type KnowledgeItem = z.infer<typeof KnowledgeItemSchema>
 
 export const REVIEW_GRADES = ['remembered', 'forgot'] as const
 export type ReviewGrade = typeof REVIEW_GRADES[number]
+
+// ── 错题本(模块六) ──────────────────────────────────────────
+export const CONQUER_THRESHOLD = 60
+
+// AI 原始输出:只打分+点评,不自称通过与否
+export const AttemptGradeRawSchema = z.object({
+  score: z.number().min(0).max(100),
+  comment: z.string(),
+  gaps: z.array(z.string()).default([]),
+})
+export type AttemptGradeRaw = z.infer<typeof AttemptGradeRawSchema>
+
+export const KnowledgeAttemptFeedbackSchema = z.object({
+  score: z.number().min(0).max(100),
+  verdict: z.enum(['pass', 'fail']),
+  comment: z.string(),
+  gaps: z.array(z.string()).default([]),
+})
+export type KnowledgeAttemptFeedback = z.infer<typeof KnowledgeAttemptFeedbackSchema>
+
+export const KnowledgeAttemptSchema = z.object({
+  id: z.number(),
+  itemId: z.number(),
+  answer: z.string(),
+  score: z.number(),
+  feedback: KnowledgeAttemptFeedbackSchema,
+  createdAt: z.string(),
+})
+export type KnowledgeAttempt = z.infer<typeof KnowledgeAttemptSchema>
