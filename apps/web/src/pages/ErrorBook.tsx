@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { Card, Button, Badge } from '../components/ui'
 import { Markdown } from '../components/Markdown'
-import { Target, Loader2, CheckCircle2, XCircle } from 'lucide-react'
-import type { KnowledgeItem, KnowledgeAttemptFeedback } from '@aios/shared'
+import { Target, Loader2, CheckCircle2, XCircle, History } from 'lucide-react'
+import type { KnowledgeItem, KnowledgeAttempt, KnowledgeAttemptFeedback } from '@aios/shared'
 
 const SOURCE_LABEL: Record<string, string> = { interview: '模拟面试', deepdive: '项目深挖' }
 type BookItem = KnowledgeItem & { attemptCount: number }
@@ -32,12 +32,23 @@ export function ErrorBook() {
 
 function List({ status }: { status: 'pending' | 'conquered' }) {
   const [items, setItems] = useState<BookItem[] | null>(null)
+  const [error, setError] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
 
-  async function load() { setItems(await api.listErrorBook({ status }).catch(() => [])) }
+  async function load() {
+    setError('')
+    try { setItems(await api.listErrorBook({ status })) }
+    catch (e: any) { setError(e.message ?? '加载失败'); setItems([]) }
+  }
   useEffect(() => { load() /* eslint-disable-next-line */ }, [status])
 
   if (items === null) return <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="animate-spin" /> 加载中…</div>
+  if (error) return (
+    <Card className="space-y-3 p-6 text-sm">
+      <p className="text-danger">加载失败:{error}</p>
+      <Button variant="secondary" onClick={load}>重试</Button>
+    </Card>
+  )
   if (items.length === 0) return <Card className="p-6 text-sm text-muted">{status === 'pending' ? '没有待攻克的错题。去「模拟面试」或「项目深挖」答错的题,存入知识库后会出现在这里。' : '还没有攻克任何错题,加油!'}</Card>
 
   return (
@@ -53,18 +64,24 @@ function List({ status }: { status: 'pending' | 'conquered' }) {
               <span className="text-xs text-faint">重做 {it.attemptCount} 次</span>
             </div>
           </button>
-          {expanded === it.id && <Redo item={it} onConquered={load} />}
+          {expanded === it.id && <Detail item={it} onConquered={load} />}
         </Card>
       ))}
     </div>
   )
 }
 
-function Redo({ item, onConquered }: { item: BookItem; onConquered: () => void }) {
+// 展开区:重做表单 + 历史记录(both pending 与 conquered 共用)
+function Detail({ item, onConquered }: { item: BookItem; onConquered: () => void }) {
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)
   const [fb, setFb] = useState<KnowledgeAttemptFeedback | null>(null)
   const [error, setError] = useState('')
+  const [history, setHistory] = useState<KnowledgeAttempt[] | null>(null)
+  const [showRedo, setShowRedo] = useState(!item.conqueredAt)
+
+  async function loadHistory() { setHistory(await api.listAttempts(item.id).catch(() => [])) }
+  useEffect(() => { loadHistory() /* eslint-disable-next-line */ }, [item.id])
 
   async function submit() {
     if (!answer.trim()) { setError('答案不能为空'); return }
@@ -72,7 +89,9 @@ function Redo({ item, onConquered }: { item: BookItem; onConquered: () => void }
     try {
       const res = await api.submitAttempt(item.id, answer.trim())
       setFb(res.feedback)
-      if (res.conquered) onConquered()
+      setAnswer('')
+      await loadHistory()
+      if (res.conquered) { setShowRedo(false); onConquered() }
     } catch (e: any) { setError(e.message) } finally { setBusy(false) }
   }
 
@@ -80,21 +99,63 @@ function Redo({ item, onConquered }: { item: BookItem; onConquered: () => void }
   return (
     <div className="mt-3 space-y-3 border-t border-border pt-3">
       {item.reference && <div><p className="mb-1 text-xs font-semibold uppercase tracking-wide text-faint">参考答案</p><Markdown>{item.reference}</Markdown></div>}
-      <label className="block space-y-1"><span className="text-sm text-muted">重做答案(支持 Markdown)</span>
-        <textarea aria-label="重做答案" rows={4} value={answer} onChange={e => setAnswer(e.target.value)} className={field} /></label>
-      {error && <p className="text-sm text-danger">{error}</p>}
-      <Button variant="primary" onClick={submit} disabled={busy}>{busy ? <Loader2 size={15} className="animate-spin" /> : null} 让 AI 评分</Button>
-      {fb && (
-        <div className="space-y-2 rounded-card border border-border bg-surface-2 p-3">
-          <div className="flex items-center gap-2">
-            {fb.verdict === 'pass' ? <CheckCircle2 size={16} className="text-success" /> : <XCircle size={16} className="text-danger" />}
-            <span className="text-sm font-medium">{fb.verdict === 'pass' ? '通过' : '未通过'} · {fb.score} 分</span>
-          </div>
-          <Markdown>{fb.comment}</Markdown>
-          {fb.gaps.length > 0 && (
-            <div><p className="mb-1 text-xs font-semibold uppercase tracking-wide text-faint">仍需补强</p>
-              <ul className="list-disc pl-5 text-sm text-muted">{fb.gaps.map((g, i) => <li key={i}>{g}</li>)}</ul></div>
-          )}
+
+      {/* 已攻克时重做表单默认收起,避免误以为没做过 */}
+      {item.conqueredAt && !showRedo ? (
+        <Button variant="secondary" onClick={() => setShowRedo(true)}>再练一次</Button>
+      ) : (
+        <>
+          <label className="block space-y-1"><span className="text-sm text-muted">重做答案(支持 Markdown)</span>
+            <textarea aria-label="重做答案" rows={4} value={answer} onChange={e => setAnswer(e.target.value)}
+              placeholder="凭现在的理解重新作答,提交后 AI 会重新评分…" className={field} /></label>
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <Button variant="primary" onClick={submit} disabled={busy}>{busy ? <><Loader2 size={15} className="animate-spin" /> AI 评分中(约需数十秒)…</> : '让 AI 评分'}</Button>
+        </>
+      )}
+
+      {fb && <FeedbackCard fb={fb} />}
+      {history && history.length > 0 && <HistoryList attempts={history} />}
+    </div>
+  )
+}
+
+function FeedbackCard({ fb }: { fb: KnowledgeAttemptFeedback }) {
+  return (
+    <div className="space-y-2 rounded-card border border-border bg-surface-2 p-3">
+      <div className="flex items-center gap-2">
+        {fb.verdict === 'pass' ? <CheckCircle2 size={16} className="text-success" /> : <XCircle size={16} className="text-danger" />}
+        <span className="text-sm font-medium">{fb.verdict === 'pass' ? '通过' : '未通过'} · {fb.score} 分</span>
+      </div>
+      <Markdown>{fb.comment}</Markdown>
+      {fb.gaps.length > 0 && (
+        <div><p className="mb-1 text-xs font-semibold uppercase tracking-wide text-faint">仍需补强</p>
+          <ul className="list-disc pl-5 text-sm text-muted">{fb.gaps.map((g, i) => <li key={i}>{g}</li>)}</ul></div>
+      )}
+    </div>
+  )
+}
+
+function HistoryList({ attempts }: { attempts: KnowledgeAttempt[] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="space-y-2">
+      <button onClick={() => setOpen(o => !o)} className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-faint hover:text-muted">
+        <History size={13} /> 重做历史({attempts.length}){open ? ' ▲' : ' ▼'}
+      </button>
+      {open && (
+        <div className="space-y-2">
+          {attempts.map(a => (
+            <div key={a.id} className="rounded-card border border-border bg-surface-2 p-3">
+              <div className="mb-1 flex items-center gap-2 text-xs">
+                {a.feedback.verdict === 'pass' ? <CheckCircle2 size={13} className="text-success" /> : <XCircle size={13} className="text-danger" />}
+                <span className="font-medium text-text">{a.score} 分</span>
+                <span className="text-faint">{a.createdAt}</span>
+              </div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-faint">我的答</p>
+              <Markdown>{a.answer}</Markdown>
+              {a.feedback.comment && <><p className="mb-1 mt-2 text-xs font-semibold uppercase tracking-wide text-faint">AI 点评</p><Markdown>{a.feedback.comment}</Markdown></>}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -103,7 +164,21 @@ function Redo({ item, onConquered }: { item: BookItem; onConquered: () => void }
 
 function Insight() {
   const [s, setS] = useState<Awaited<ReturnType<typeof api.errorBookStats>> | null>(null)
-  useEffect(() => { api.errorBookStats().then(setS).catch(() => {}) }, [])
+  const [error, setError] = useState('')
+
+  async function load() {
+    setError('')
+    try { setS(await api.errorBookStats()) }
+    catch (e: any) { setError(e.message ?? '加载失败') }
+  }
+  useEffect(() => { load() /* eslint-disable-next-line */ }, [])
+
+  if (error) return (
+    <Card className="space-y-3 p-6 text-sm">
+      <p className="text-danger">加载失败:{error}</p>
+      <Button variant="secondary" onClick={load}>重试</Button>
+    </Card>
+  )
   if (!s) return <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="animate-spin" /> 加载中…</div>
 
   const metrics = [
@@ -120,7 +195,7 @@ function Insight() {
       </div>
       <Card className="space-y-3 p-4">
         <p className="text-sm font-semibold text-text">按来源</p>
-        {s.bySource.map(b => <div key={b.source} className="flex justify-between text-sm"><span className="text-muted">{SOURCE_LABEL[b.source] ?? b.source}</span><span className="text-text">{b.count}</span></div>)}
+        {s.bySource.length === 0 ? <p className="text-sm text-muted">暂无数据</p> : s.bySource.map(b => <div key={b.source} className="flex justify-between text-sm"><span className="text-muted">{SOURCE_LABEL[b.source] ?? b.source}</span><span className="text-text">{b.count}</span></div>)}
       </Card>
       <Card className="space-y-2 p-4">
         <p className="text-sm font-semibold text-text">薄弱知识点(未攻克)</p>

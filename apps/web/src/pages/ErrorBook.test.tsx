@@ -29,6 +29,23 @@ describe('ErrorBook', () => {
     expect(await findByText(/答得好/)).toBeTruthy()
     expect(await findByText(/通过/)).toBeTruthy()
   })
+  it('shows redo history when attempts exist', async () => {
+    vi.spyOn(api, 'listAttempts').mockResolvedValue([
+      { id:9, itemId:1, answer:'历史答案', score:45, feedback:{ score:45, verdict:'fail', comment:'差点', gaps:[] }, createdAt:'2026-07-09' },
+    ] as any)
+    const { findByText, getByText } = render(<ErrorBook />)
+    fireEvent.click(await findByText(/RAG 如何召回/))
+    fireEvent.click(await findByText(/重做历史/))
+    expect(await findByText(/历史答案/)).toBeTruthy()
+  })
+  it('conquered item hides redo form behind a button', async () => {
+    vi.spyOn(api, 'listErrorBook').mockResolvedValue([{ ...weak, conqueredAt:'2026-07-10', attemptCount:1 }] as any)
+    const { findByText, queryByLabelText, getByText, getByLabelText } = render(<ErrorBook />)
+    fireEvent.click(await findByText(/RAG 如何召回/))
+    expect(queryByLabelText(/重做答案/)).toBeNull()   // 默认收起
+    fireEvent.click(getByText(/再练一次/))
+    expect(getByLabelText(/重做答案/)).toBeTruthy()    // 点开后出现
+  })
   it('insight tab renders stats', async () => {
     const { findByText, getByText } = render(<ErrorBook />)
     await findByText(/RAG 如何召回/)
