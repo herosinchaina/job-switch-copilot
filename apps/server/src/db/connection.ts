@@ -102,4 +102,16 @@ export function migrate(db: DatabaseSync): void {
     CREATE UNIQUE INDEX IF NOT EXISTS ux_ki_source_ref
       ON knowledge_items(source, source_ref) WHERE source_ref IS NOT NULL;
   `)
+  // 模块六 错题本:攻克状态列(幂等)
+  try { db.exec('ALTER TABLE knowledge_items ADD COLUMN conquered_at TEXT') } catch { /* 已存在 */ }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS knowledge_attempts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id INTEGER NOT NULL REFERENCES knowledge_items(id),
+      answer TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      feedback_json TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')));
+    CREATE INDEX IF NOT EXISTS ix_ka_item ON knowledge_attempts(item_id);
+  `)
 }

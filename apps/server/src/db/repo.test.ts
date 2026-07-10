@@ -7,6 +7,7 @@ import { seedProblems, listProblems, getProblem, setProgress, progressSummary,
   createGuideSession, getGuideSession, finishGuideSession, createGuideTurn, answerGuideTurn, listGuideTurns } from './repo'
 import { createKnowledgeItem, importWeakItem, getKnowledgeItem, updateKnowledgeItem,
   deleteKnowledgeItem, listKnowledgeItems, listDueItems, reviewKnowledgeItem, listAllTags } from './repo'
+import { createAttempt, listAttempts, listBookItems, bookStats } from './repo'
 
 let db: DatabaseSync
 beforeEach(() => { db = openDb(':memory:') })
@@ -224,5 +225,68 @@ describe('knowledge repo', () => {
     expect(listAllTags(db).sort()).toEqual(['ai','x'])
     deleteKnowledgeItem(db, id)
     expect(getKnowledgeItem(db, id)).toBeUndefined()
+  })
+})
+
+describe('error-book repo', () => {
+  function seed(db: any) {
+    // 两条面试差题 + 一条深挖 + 一条手动(不应算错题)
+    const i1 = createKnowledgeItem(db, { question:'q-i1', answer:'a', reference:'ref', tags:['rag'], note:null, source:'interview', sourceRef:'t1' })
+    const i2 = createKnowledgeItem(db, { question:'q-i2', answer:'a', reference:null, tags:['sql'], note:null, source:'interview', sourceRef:'t2' })
+    const d1 = createKnowledgeItem(db, { question:'q-d1', answer:'a', reference:'ref', tags:['rag'], note:null, source:'deepdive', sourceRef:'t3' })
+    createKnowledgeItem(db, { question:'q-m', answer:null, reference:null, tags:['x'], note:null, source:'manual', sourceRef:null })
+    return { i1, i2, d1 }
+  }
+  it('listBookItems excludes manual and defaults to pending', () => {
+    const db = openDb(':memory:'); const { } = seed(db)
+    const items = listBookItems(db, {})
+    expect(items).toHaveLength(3)
+    expect(items.every(x => x.source !== 'manual')).toBe(true)
+    expect(items.every(x => typeof x.attemptCount === 'number')).toBe(true)
+  })
+  it('createAttempt with pass verdict sets conquered_at and moves item to conquered list', () => {
+    const db = openDb(':memory:'); const { i1 } = seed(db)
+    const { conquered } = createAttempt(db, { itemId: i1, answer:'better', feedback:{ score:80, verdict:'pass', comment:'ok', gaps:[] } })
+    expect(conquered).toBe(true)
+    expect(listBookItems(db, { status:'pending' }).find(x => x.id === i1)).toBeUndefined()
+    expect(listBookItems(db, { status:'conquered' }).find(x => x.id === i1)).toBeTruthy()
+  })
+  it('createAttempt with fail verdict does not conquer', () => {
+    const db = openDb(':memory:'); const { i1 } = seed(db)
+    const { conquered } = createAttempt(db, { itemId: i1, answer:'bad', feedback:{ score:40, verdict:'fail', comment:'', gaps:['x'] } })
+    expect(conquered).toBe(false)
+    expect(listBookItems(db, { status:'pending' }).find(x => x.id === i1)).toBeTruthy()
+  })
+  it('re-attempting a conquered item does not overwrite conquered_at and returns conquered:false', () => {
+    const db = openDb(':memory:'); const { i1 } = seed(db)
+    createAttempt(db, { itemId: i1, answer:'a', feedback:{ score:80, verdict:'pass', comment:'', gaps:[] } })
+    const second = createAttempt(db, { itemId: i1, answer:'b', feedback:{ score:90, verdict:'pass', comment:'', gaps:[] } })
+    expect(second.conquered).toBe(false)
+    expect(listAttempts(db, i1)).toHaveLength(2)
+  })
+  it('listAttempts returns newest first', () => {
+    const db = openDb(':memory:'); const { i1 } = seed(db)
+    const a1 = createAttempt(db, { itemId:i1, answer:'first', feedback:{ score:30, verdict:'fail', comment:'', gaps:[] } }).attempt
+    const a2 = createAttempt(db, { itemId:i1, answer:'second', feedback:{ score:70, verdict:'pass', comment:'', gaps:[] } }).attempt
+    const list = listAttempts(db, i1)
+    expect(list[0].id).toBe(a2.id); expect(list[1].id).toBe(a1.id)
+  })
+  it('listBookItems filters by source and tag', () => {
+    const db = openDb(':memory:'); seed(db)
+    expect(listBookItems(db, { source:'deepdive' }).every(x => x.source === 'deepdive')).toBe(true)
+    expect(listBookItems(db, { tag:'rag' }).every(x => x.tags.includes('rag'))).toBe(true)
+  })
+  it('bookStats aggregates totals, sources and weak tags', () => {
+    const db = openDb(':memory:'); const { i1 } = seed(db)
+    createAttempt(db, { itemId:i1, answer:'a', feedback:{ score:80, verdict:'pass', comment:'', gaps:[] } })
+    const s = bookStats(db)
+    expect(s.total).toBe(3)
+    expect(s.conquered).toBe(1)
+    expect(s.pending).toBe(2)
+    expect(s.conqueredLast7Days).toBe(1)
+    expect(s.bySource.find(x => x.source === 'interview')!.count).toBe(2)
+    // i1 已攻克,其 rag 标签不再计入薄弱;剩 d1(rag) 与 i2(sql)
+    expect(s.byTag.find(x => x.tag === 'rag')!.count).toBe(1)
+    expect(s.byTag.find(x => x.tag === 'sql')!.count).toBe(1)
   })
 })
