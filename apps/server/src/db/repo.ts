@@ -234,11 +234,11 @@ export function createKnowledgeItem(db: DatabaseSync, input: KnowledgeItemInput 
       input.source, input.sourceRef, input.note).lastInsertRowid)
 }
 
-export function importWeakItem(db: DatabaseSync, w: { source: KnowledgeSource; sourceRef: string; question: string; answer: string | null; reference: string | null }): number | null {
+export function importWeakItem(db: DatabaseSync, w: { source: KnowledgeSource; sourceRef: string; question: string; answer: string | null; reference: string | null; tags?: string[] }): number | null {
   const res = db.prepare(`INSERT OR IGNORE INTO knowledge_items
     (question,answer,reference,tags,source,source_ref,note,review_due,review_interval,review_count)
-    VALUES (?,?,?, '[]', ?,?, NULL, date('now','localtime'), 0, 0)`)
-    .run(w.question, w.answer, w.reference, w.source, w.sourceRef)
+    VALUES (?,?,?, ?, ?,?, NULL, date('now','localtime'), 0, 0)`)
+    .run(w.question, w.answer, w.reference, JSON.stringify(w.tags ?? []), w.source, w.sourceRef)
   return res.changes ? Number(res.lastInsertRowid) : null
 }
 

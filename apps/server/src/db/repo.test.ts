@@ -188,6 +188,13 @@ describe('knowledge repo', () => {
     expect(a).not.toBeNull(); expect(b).toBeNull()
     expect(listKnowledgeItems(db, {}).length).toBe(1)
   })
+  it('importWeakItem persists provided tags (empty default)', () => {
+    const db = openDb(':memory:')
+    const noTag = importWeakItem(db, { source:'interview', sourceRef:'1', question:'Q1', answer:'a', reference:null })
+    const withTag = importWeakItem(db, { source:'deepdive', sourceRef:'2', question:'Q2', answer:'a', reference:null, tags:['项目深挖'] })
+    expect(getKnowledgeItem(db, noTag!)!.tags).toEqual([])
+    expect(getKnowledgeItem(db, withTag!)!.tags).toEqual(['项目深挖'])
+  })
   it('filters by source/tag/mastery and q (LIKE)', () => {
     const db = openDb(':memory:')
     createKnowledgeItem(db, { question:'RAG 召回', answer:null, reference:null, tags:['ai'], note:null, source:'manual', sourceRef:null })
