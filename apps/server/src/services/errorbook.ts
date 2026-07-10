@@ -18,6 +18,6 @@ export async function gradeAttempt(
     score: raw.score,
     verdict: raw.score >= CONQUER_THRESHOLD ? 'pass' : 'fail',
     comment: raw.comment,
-    gaps: raw.gaps,
+    gaps: raw.gaps ?? [],
   }
 }
