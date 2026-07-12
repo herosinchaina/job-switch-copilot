@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI 求职操作系统 · 首页重设计</title>
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#070a12;
+  --panel:rgba(255,255,255,.028); --panel-2:rgba(255,255,255,.05);
+  --border:rgba(255,255,255,.08); --border-strong:rgba(255,255,255,.16);
+  --text:#eef1f7; --muted:#98a0b3; --faint:#5f6880;
+  --accent:#d9b877; --accent-2:#e8cf9a; --accent-deep:#c2a05f;
+  --cyan:#7fd4d0; --emerald:#7ecfa0; --amber:#e3c169; --rose:#e29aa4;
+  --violet:#a99be0;
+  --glow:rgba(217,184,119,.30);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue","PingFang SC","Microsoft Yahei",sans-serif;
+  --shadow-card:0 1px 2px rgba(0,0,0,.3),0 8px 26px -12px rgba(0,0,0,.6);
+  --shadow-lift:0 10px 30px -8px rgba(0,0,0,.55),0 30px 70px -30px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font); color:var(--text); background:var(--bg);
+  -webkit-font-smoothing:antialiased; letter-spacing:-.011em; overflow:hidden;
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(1000px 560px at 12% -10%, rgba(40,58,110,.45), transparent 60%),
+    radial-gradient(820px 560px at 100% 0%, rgba(217,184,119,.08), transparent 55%),
+    radial-gradient(700px 500px at 50% 120%, rgba(30,44,90,.4), transparent 60%),
+    linear-gradient(180deg,var(--bg),var(--bg2));
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.4;
+  background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.04) 1px, transparent 0);
+  background-size:28px 28px;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.5),transparent 70%);
+}
+.app{position:relative; z-index:1; display:grid; grid-template-columns:248px 1fr; height:100vh}
+
+/* ── Sidebar ── */
+.side{
+  display:flex; flex-direction:column; gap:3px; padding:22px 14px;
+  border-right:1px solid var(--border); background:rgba(10,14,26,.6); backdrop-filter:blur(24px) saturate(160%);
+}
+.brand{display:flex; align-items:center; gap:11px; padding:6px 8px 22px}
+.brand .logo{
+  width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(140deg,var(--accent-2),var(--accent-deep));
+  box-shadow:0 4px 12px -3px var(--glow), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.brand .logo svg{width:19px;height:19px;color:#1a1408}
+.brand b{font-size:14.5px;font-weight:600;letter-spacing:-.02em;line-height:1.15}
+.brand span{display:block;font-size:11px;color:var(--faint);font-weight:400;margin-top:1px}
+.nav-label{font-size:11px;letter-spacing:.02em;color:var(--faint);padding:16px 10px 5px;font-weight:500}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;
+  color:var(--muted);font-size:13.5px;font-weight:450;cursor:pointer;border:1px solid transparent;
+  transition:.16s ease; position:relative;
+}
+.nav-item svg{width:18px;height:18px;flex:none;opacity:.75}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.nav-item.active{
+  background:linear-gradient(100deg,rgba(217,184,119,.18),rgba(217,184,119,.06));
+  color:var(--accent-2); font-weight:500; border-color:rgba(217,184,119,.22);
+}
+.nav-item.active svg{opacity:1}
+.nav-badge{margin-left:auto;font-size:11px;background:rgba(227,193,105,.16);color:var(--amber);padding:1px 7px;border-radius:99px;font-weight:600}
+.nav-item.active .nav-badge{background:rgba(217,184,119,.22);color:var(--accent-2)}
+.side-foot{margin-top:auto;padding-top:14px}
+.pill-user{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--border)}
+.pill-user .av{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--violet));display:grid;place-items:center;font-size:12px;font-weight:700;color:#1a1408}
+.pill-user small{color:var(--faint);font-size:11px}
+
+/* ── Main ── */
+.main{overflow-y:auto;scroll-behavior:smooth}
+.main::-webkit-scrollbar{width:9px}
+.main::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px;border:2px solid transparent;background-clip:padding-box}
+.topbar{
+  position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:16px;
+  padding:15px 34px;border-bottom:1px solid var(--border);
+  background:rgba(10,14,26,.6);backdrop-filter:blur(24px) saturate(160%);
+}
+.crumb{font-size:13px;color:var(--faint)}
+.crumb b{color:var(--text);font-weight:600}
+.search{
+  margin-left:auto;display:flex;align-items:center;gap:9px;width:280px;max-width:34vw;
+  padding:8px 14px;border-radius:99px;background:rgba(255,255,255,.06);border:1px solid transparent;color:var(--muted);font-size:13px;transition:.16s;
+}
+.search:focus-within{background:var(--panel-2);border-color:rgba(217,184,119,.4);box-shadow:0 0 0 3px var(--glow)}
+.search svg{width:15px;height:15px}
+.search input{background:none;border:none;outline:none;color:var(--text);font-size:13px;width:100%;font-family:inherit}
+.tbtn{width:36px;height:36px;border-radius:99px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid transparent;color:var(--muted);cursor:pointer;transition:.16s}
+.tbtn:hover{color:var(--text);background:rgba(255,255,255,.1)}
+.tbtn svg{width:17px;height:17px}
+.wrap{padding:30px 34px 60px;max-width:1180px;margin:0 auto}
+
+/* ── Page transitions ── */
+.page{display:none;animation:fade .5s cubic-bezier(.22,1,.36,1) both}
+.page.show{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.reveal{animation:fade .55s cubic-bezier(.22,1,.36,1) both}
+
+/* ── Hero ── */
+.hero{
+  position:relative;overflow:hidden;border-radius:28px;padding:44px 46px;
+  border:1px solid var(--border-strong);
+  background:linear-gradient(150deg,rgba(28,40,78,.75),rgba(14,19,36,.7) 65%,rgba(20,17,10,.6));
+  box-shadow:var(--shadow-lift);
+}
+.hero .glow1{position:absolute;left:-60px;top:-120px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(60,90,180,.4),transparent 65%);filter:blur(26px)}
+.hero .glow2{position:absolute;right:-40px;bottom:-140px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(217,184,119,.16),transparent 65%);filter:blur(26px)}
+.hero .topline{position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(217,184,119,.45),transparent);display:block}
+.hero-grid{position:relative;display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center}
+.tag{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;color:var(--accent-2);background:rgba(217,184,119,.1);border:1px solid rgba(217,184,119,.2);padding:6px 13px;border-radius:99px}
+.tag svg{width:14px;height:14px}
+.hero h1{font-size:42px;line-height:1.08;letter-spacing:-.03em;font-weight:600;margin:20px 0 0;color:#fff}
+.hero h1 .grad{background:linear-gradient(110deg,var(--accent-2),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin-top:16px;max-width:440px;font-size:16px;line-height:1.6;color:var(--muted);font-weight:400}
+.hero-cta{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:99px;font-size:14px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:.2s;font-family:inherit}
+.btn svg{width:16px;height:16px}
+.btn-primary{background:linear-gradient(120deg,var(--accent-2),var(--accent));color:#1a1408;box-shadow:0 6px 18px -6px var(--glow)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 24px -6px var(--glow)}
+.btn-ghost{background:rgba(255,255,255,.08);color:var(--text);border-color:var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.13)}
+
+/* Ring */
+.ring-wrap{position:relative;width:200px;height:200px;display:grid;place-items:center}
+.ring-wrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring-center{position:absolute;text-align:center}
+.ring-center .num{font-size:56px;font-weight:600;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;color:#fff}
+.ring-center .num small{font-size:22px;color:var(--faint);font-weight:500}
+.ring-center .lbl{font-size:13px;color:var(--muted);margin-top:8px;font-weight:400}
+
+/* ── KPI strip ── */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}
+.kpi{padding:18px 20px;border-radius:18px;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow-card);transition:.2s}
+.kpi:hover{transform:translateY(-2px);border-color:var(--border-strong)}
+.kpi .k-top{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:400}
+.kpi .k-top svg{width:15px;height:15px}
+.kpi .k-val{font-size:28px;font-weight:600;letter-spacing:-.03em;margin-top:10px;font-variant-numeric:tabular-nums}
+.kpi .k-val small{font-size:13px;color:var(--faint);font-weight:400}
+.kpi .k-trend{font-size:12px;margin-top:5px;font-weight:500}
+.up{color:var(--emerald)} .down{color:var(--rose)} .flat{color:var(--faint)}
+
+/* ── Section headers ── */
+.sec-head{display:flex;align-items:baseline;gap:12px;margin:38px 0 16px}
+.sec-head h2{font-size:22px;font-weight:600;letter-spacing:-.02em}
+.sec-head span{font-size:14px;color:var(--faint)}
+.sec-head a{margin-left:auto;font-size:13px;color:var(--accent);cursor:pointer;font-weight:400}
+
+/* ── Module bento ── */
+.bento{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.mod{
+  position:relative;overflow:hidden;padding:24px;border-radius:20px;cursor:pointer;
+  background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow-card);transition:.28s cubic-bezier(.22,1,.36,1);
+  display:flex;flex-direction:column;min-height:178px;
+}
+.mod:hover{transform:translateY(-5px);border-color:var(--border-strong);box-shadow:var(--shadow-lift)}
+.mod .m-glow{position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;filter:blur(30px);opacity:.14;transition:.28s}
+.mod:hover .m-glow{opacity:.4}
+.mod .m-ico{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#1a1408}
+.mod .m-ico svg{width:22px;height:22px}
+.mod h3{font-size:16px;font-weight:600;letter-spacing:-.02em;margin-top:16px;display:flex;align-items:center;gap:8px}
+.mod p{font-size:13px;color:var(--muted);line-height:1.55;margin-top:6px;font-weight:400}
+.mod .m-foot{margin-top:auto;padding-top:14px;display:flex;align-items:center;justify-content:space-between}
+.mod .m-stat{font-size:12.5px;color:var(--faint);font-weight:400}
+.mod .m-stat b{color:var(--text);font-weight:600;font-size:16px}
+.mod .arrow{width:30px;height:30px;border-radius:99px;display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);transition:.2s}
+.mod:hover .arrow{background:var(--accent);color:#1a1408;transform:translate(2px,-2px)}
+.mod .arrow svg{width:15px;height:15px}
+.m-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:15px}
+.m-bar i{display:block;height:100%;border-radius:99px}
+/* accent colors per module — icons stay legible on dark via light-on-tint */
+.c-indigo .m-ico{background:linear-gradient(140deg,#8fb0ff,#5f7fd6)} .c-indigo .m-glow{background:#7f9fe6} .c-indigo .m-bar i{background:linear-gradient(90deg,#8fb0ff,#5f7fd6)}
+.c-cyan .m-ico{background:linear-gradient(140deg,#9fe0dc,#5fb8b3)} .c-cyan .m-glow{background:var(--cyan)} .c-cyan .m-bar i{background:linear-gradient(90deg,#9fe0dc,#5fb8b3)}
+.c-violet .m-ico{background:linear-gradient(140deg,#c3b6f0,#9082d0)} .c-violet .m-glow{background:var(--violet)} .c-violet .m-bar i{background:linear-gradient(90deg,#c3b6f0,#9082d0)}
+.c-emerald .m-ico{background:linear-gradient(140deg,#a0dcbb,#5fb587)} .c-emerald .m-glow{background:var(--emerald)} .c-emerald .m-bar i{background:linear-gradient(90deg,#a0dcbb,#5fb587)}
+.c-amber .m-ico{background:linear-gradient(140deg,var(--accent-2),var(--accent))} .c-amber .m-glow{background:var(--amber)} .c-amber .m-bar i{background:linear-gradient(90deg,var(--accent-2),var(--accent))}
+.c-rose .m-ico{background:linear-gradient(140deg,#eeb0b8,#d0808c)} .c-rose .m-glow{background:var(--rose)} .c-rose .m-bar i{background:linear-gradient(90deg,#eeb0b8,#d0808c)}
+.chip{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:99px;background:rgba(227,193,105,.16);color:var(--amber)}
+
+/* ── two column ── */
+.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px}
+.card{padding:24px;border-radius:20px;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow-card)}
+.card h3{font-size:16px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+.card h3 svg{width:17px;height:17px;color:var(--accent)}
+/* timeline */
+.tl{margin-top:6px}
+.tl-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);position:relative}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{width:34px;height:34px;border-radius:11px;flex:none;display:grid;place-items:center;background:rgba(255,255,255,.05)}
+.tl-dot svg{width:15px;height:15px}
+.tl-body{flex:1}
+.tl-body .t{font-size:13.5px;font-weight:450}
+.tl-body .d{font-size:12px;color:var(--faint);margin-top:2px}
+.tl-time{font-size:11.5px;color:var(--faint);white-space:nowrap}
+/* radar-ish list */
+.dim{display:flex;align-items:center;gap:12px;padding:10px 0}
+.dim .dn{font-size:13px;width:64px;color:var(--muted)}
+.dim .db{flex:1;height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.dim .db i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.dim .dv{font-size:13px;font-weight:600;width:34px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── sub page generic ── */
+.sub-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:26px}
+.sub-head .ico{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;color:#1a1408;flex:none;background:linear-gradient(140deg,var(--accent-2),var(--accent));box-shadow:var(--shadow-card)}
+.sub-head .ico svg{width:25px;height:25px}
+.sub-head h1{font-size:28px;font-weight:600;letter-spacing:-.03em;color:#fff}
+.sub-head p{font-size:14px;color:var(--muted);margin-top:5px;font-weight:400}
+.tabs{display:flex;gap:6px;margin-bottom:22px;background:rgba(255,255,255,.05);padding:4px;border-radius:12px;width:fit-content}
+.tab{padding:8px 16px;font-size:13.5px;font-weight:450;color:var(--muted);cursor:pointer;border-radius:9px;transition:.16s}
+.tab:hover{color:var(--text)}
+.tab.active{color:#1a1408;background:linear-gradient(120deg,var(--accent-2),var(--accent));font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.stat-lg{padding:22px;border-radius:18px;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow-card)}
+.stat-lg .l{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.stat-lg .l svg{width:15px;height:15px}
+.stat-lg .v{font-size:32px;font-weight:600;margin-top:10px;letter-spacing:-.03em}
+.stat-lg .v small{font-size:14px;color:var(--faint);font-weight:400}
+.list-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;background:var(--panel);border:1px solid var(--border);margin-bottom:10px;transition:.16s;cursor:pointer}
+.list-row:hover{background:var(--panel-2);border-color:var(--border-strong)}
+.badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px}
+.b-green{background:rgba(126,207,160,.14);color:var(--emerald)}
+.b-amber{background:rgba(227,193,105,.16);color:var(--amber)}
+.b-rose{background:rgba(226,154,164,.14);color:var(--rose)}
+.b-indigo{background:rgba(143,176,255,.16);color:#a9c0ff}
+.b-slate{background:rgba(255,255,255,.07);color:var(--muted)}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.hint{margin-top:8px;font-size:12px;color:var(--faint)}
+.spacer{height:8px}
+@media(max-width:1080px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;left:-260px;transition:.3s;z-index:50;height:100%}
+  .kpis,.bento,.grid3{grid-template-columns:repeat(2,1fr)}
+  .cols,.grid2{grid-template-columns:1fr}
+  .hero-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.8L19 9l-4.8 1.9L12 16l-1.9-5.1L5 9l5.1-1.2z"/></svg></div>
+      <div><b>AI 求职 OS</b><span>Offer 加速引擎</span></div>
+    </div>
+    <div class="nav-label">总览</div>
+    <div class="nav-item active" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>工作台</div>
+    <div class="nav-label">训练模块</div>
+    <div class="nav-item" data-nav="resume"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>简历大师</div>
+    <div class="nav-item" data-nav="interview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h13a2 2 0 012 2z"/></svg>模拟面试</div>
+    <div class="nav-item" data-nav="deepdive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/></svg>项目深挖</div>
+    <div class="nav-item" data-nav="knowledge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M20 20V7"/></svg>知识库<span class="nav-badge">7</span></div>
+    <div class="nav-item" data-nav="errorbook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg>错题本<span class="nav-badge">3</span></div>
+    <div class="nav-item" data-nav="leetcode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg>算法学习</div>
+    <div class="side-foot">
+      <div class="pill-user"><div class="av">Z</div><div><div style="font-size:13px;font-weight:600">Zixu</div><small>目标 · 后端工程师</small></div></div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb" id="crumb"><b>工作台</b></div>
+      <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input placeholder="搜索模块、知识点、题目…"/></div>
+      <div class="tbtn" title="导出数据"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></div>
+      <div class="tbtn" title="切换主题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg></div>
+    </div>
+    <div class="wrap">
+      <!-- ============ HOME ============ -->
+      <section class="page show" id="page-home">
+        <div class="hero reveal">
+          <span class="topline"></span><span class="glow1"></span><span class="glow2"></span>
+          <div class="hero-grid">
+            <div>
+              <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.8L19 9l-4.8 1.9L12 16l-1.9-5.1L5 9z"/></svg>Offer Readiness · 实时评估</span>
+              <h1>综合准备度<br><span class="grad">离目标 Offer 更近一步</span></h1>
+              <p>已开启 4 / 6 个训练维度，系统实时汇总简历、算法、面试、项目与错题的真实进度。持续训练，准备度稳步提升。</p>
+              <div class="hero-cta">
+                <button class="btn btn-primary" data-nav="interview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9z"/></svg>继续训练</button>
+                <button class="btn btn-ghost" data-nav="resume"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>诊断简历</button>
+              </div>
+            </div>
+            <div class="ring-wrap">
+              <svg viewBox="0 0 140 140">
+                <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8cf9a"/><stop offset="100%" stop-color="#c2a05f"/></linearGradient></defs>
+                <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
+                <circle id="ring-arc" cx="70" cy="70" r="60" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" style="transition:stroke-dashoffset 1.3s cubic-bezier(.22,1,.36,1)"/>
+              </svg>
+              <div class="ring-center"><div class="num" id="ring-num">0<small>%</small></div><div class="lbl">综合准备度</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpis reveal" style="animation-delay:.06s">
+          <div class="kpi"><div class="k-top"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>本周训练</div><div class="k-val">12<small> 次</small></div><div class="k-trend up">↑ 较上周 +40%</div></div>
+          <div class="kpi"><div class="k-top"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>累计训练时长</div><div class="k-val">8.5<small> 小时</small></div><div class="k-trend up">↑ 保持连续 5 天</div></div>
+          <div class="kpi"><div class="k-top"><svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>待攻克错题</div><div class="k-val">3<small> 道</small></div><div class="k-trend down">建议今日清零</div></div>
+          <div class="kpi"><div class="k-top"><svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>今日复习</div><div class="k-val">7<small> 条</small></div><div class="k-trend flat">记忆曲线到期</div></div>
+        </div>
+
+        <div class="sec-head reveal" style="animation-delay:.1s"><h2>训练模块</h2><span>点击任意模块进入</span><a data-nav="home">全部 6 个 →</a></div>
+        <div class="bento">
+          <div class="mod c-indigo reveal" style="animation-delay:.12s" data-nav="resume">
+            <span class="m-glow"></span>
+            <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v13H6z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></div>
+            <h3>简历大师</h3>
+            <p>双视角（HR / 面试官）诊断评分，一键优化并对比改稿。</p>
+            <div class="m-bar"><i style="width:76%"></i></div>
+            <div class="m-foot"><div class="m-stat"><b>76</b> / 100 分</div><div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+          </div>
+
+          <div class="mod c-cyan reveal" style="animation-delay:.16s" data-nav="interview">
+            <span class="m-glow"></span>
+            <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h13a2 2 0 012 2z"/></svg></div>
+            <h3>模拟面试</h3>
+            <p>AI 面试官多轮追问，实时反馈评分，自动沉淀错题。</p>
+            <div class="m-bar"><i style="width:82%"></i></div>
+            <div class="m-foot"><div class="m-stat"><b>82</b> 均分 · 5 场</div><div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+          </div>
+
+          <div class="mod c-violet reveal" style="animation-delay:.2s" data-nav="deepdive">
+            <span class="m-glow"></span>
+            <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/></svg></div>
+            <h3>项目深挖</h3>
+            <p>针对简历项目深度追问，生成项目能力图谱与提升建议。</p>
+            <div class="m-bar"><i style="width:82%"></i></div>
+            <div class="m-foot"><div class="m-stat"><b>41</b> / 50 · 3 项目</div><div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+          </div>
+
+          <div class="mod c-emerald reveal" style="animation-delay:.24s" data-nav="knowledge">
+            <span class="m-glow"></span>
+            <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M20 20V7"/></svg></div>
+            <h3>知识库 <span class="chip">7 待复习</span></h3>
+            <p>面试与项目沉淀的知识点，基于记忆曲线智能安排复习。</p>
+            <div class="m-bar"><i style="width:64%"></i></div>
+            <div class="m-foot"><div class="m-stat"><b>32</b> / 50 已掌握</div><div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+          </div>
+
+          <div class="mod c-amber reveal" style="animation-delay:.28s" data-nav="errorbook">
+            <span class="m-glow"></span>
+            <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></div>
+            <h3>错题本 <span class="chip">3 待攻克</span></h3>
+            <p>汇集所有答错题目，反复重练直到彻底攻克并生成洞察。</p>
+            <div class="m-bar"><i style="width:40%"></i></div>
+            <div class="m-foot"><div class="m-stat"><b>2</b> / 5 已攻克</div><div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+          </div>
+
+          <div class="mod c-rose reveal" style="animation-delay:.32s" data-nav="leetcode">
+            <span class="m-glow"></span>
+            <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg></div>
+            <h3>算法学习</h3>
+            <p>Hot100 分主题闯关，AI 引导式讲解，追踪掌握进度。</p>
+            <div class="m-bar"><i style="width:52%"></i></div>
+            <div class="m-foot"><div class="m-stat"><b>52</b> / 100 掌握</div><div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+          </div>
+        </div>
+
+        <div class="cols">
+          <div class="card reveal" style="animation-delay:.14s">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>近期训练轨迹</h3>
+            <div class="tl">
+              <div class="tl-item"><div class="tl-dot" style="color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h13a2 2 0 012 2z"/></svg></div><div class="tl-body"><div class="t">完成一场「后端技术面」模拟，得分 82</div><div class="d">AI 面试官 · 6 轮问答 · 生成 3 条错题</div></div><div class="tl-time">2 小时前</div></div>
+              <div class="tl-item"><div class="tl-dot" style="color:var(--emerald)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg></div><div class="tl-body"><div class="t">攻克 Hot100「两数之和」等 4 道题</div><div class="d">算法学习 · 掌握度 +4</div></div><div class="tl-time">昨天</div></div>
+              <div class="tl-item"><div class="tl-dot" style="color:var(--accent-2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/></svg></div><div class="tl-body"><div class="t">深挖「秒杀系统」项目，评分 41 / 50</div><div class="d">项目深挖 · 4 轮追问</div></div><div class="tl-time">2 天前</div></div>
+              <div class="tl-item"><div class="tl-dot" style="color:var(--cyan)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v13H6z"/></svg></div><div class="tl-body"><div class="t">上传简历并完成双视角诊断</div><div class="d">简历大师 · HR 78 · 面试官 74</div></div><div class="tl-time">3 天前</div></div>
+            </div>
+          </div>
+          <div class="card reveal" style="animation-delay:.18s">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>能力雷达</h3>
+            <div style="margin-top:8px">
+              <div class="dim"><div class="dn">简历</div><div class="db"><i style="width:76%"></i></div><div class="dv">76</div></div>
+              <div class="dim"><div class="dn">算法</div><div class="db"><i style="width:52%"></i></div><div class="dv">52</div></div>
+              <div class="dim"><div class="dn">面试</div><div class="db"><i style="width:82%"></i></div><div class="dv">82</div></div>
+              <div class="dim"><div class="dn">项目</div><div class="db"><i style="width:82%"></i></div><div class="dv">82</div></div>
+              <div class="dim"><div class="dn">知识</div><div class="db"><i style="width:64%"></i></div><div class="dv">64</div></div>
+              <div class="dim"><div class="dn">错题</div><div class="db"><i style="width:40%"></i></div><div class="dv">40</div></div>
+            </div>
+            <p class="hint">最薄弱：错题攻克与算法。建议今日优先清空错题本。</p>
+          </div>
+        </div>
+      </section>
+      <!-- ============ RESUME ============ -->
+      <section class="page" id="page-resume">
+        <div class="sub-head">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v13H6z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></div>
+          <div><h1>简历大师</h1><p>双视角智能诊断 · 一键优化 · 改稿对比</p></div>
+        </div>
+        <div class="tabs"><div class="tab active">诊断报告</div><div class="tab">优化建议</div><div class="tab">版本对比</div><div class="tab">面试锦囊</div></div>
+        <div class="grid3" style="margin-bottom:16px">
+          <div class="stat-lg"><div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>HR 视角评分</div><div class="v">78<small> / 100</small></div><div class="m-bar" style="margin-top:12px"><i style="width:78%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></i></div></div>
+          <div class="stat-lg"><div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>面试官视角</div><div class="v">74<small> / 100</small></div><div class="m-bar" style="margin-top:12px"><i style="width:74%;background:linear-gradient(90deg,#9fe0dc,#5fb8b3)"></i></div></div>
+          <div class="stat-lg"><div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>JD 匹配度</div><div class="v">81<small> %</small></div><div class="m-bar" style="margin-top:12px"><i style="width:81%;background:linear-gradient(90deg,#a0dcbb,#5fb587)"></i></div></div>
+        </div>
+        <div class="card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>关键改进项</h3>
+          <div style="margin-top:14px">
+            <div class="list-row"><span class="badge b-rose">高</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">项目描述缺少量化结果</div><div class="faint" style="font-size:12px;margin-top:2px">建议为「秒杀系统」补充 QPS、延迟等指标</div></div><svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--faint)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+            <div class="list-row"><span class="badge b-amber">中</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">技能栈排序建议调整</div><div class="faint" style="font-size:12px;margin-top:2px">将核心技术前置以匹配目标 JD</div></div><svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--faint)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+            <div class="list-row"><span class="badge b-slate">低</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">自我评价略显冗长</div><div class="faint" style="font-size:12px;margin-top:2px">精简至 2 句以内，突出差异化</div></div><svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--faint)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-primary" style="margin-top:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.8L19 9l-4.8 1.9L12 16z"/></svg>一键智能优化</button>
+        </div>
+      </section>
+
+      <!-- ============ INTERVIEW ============ -->
+      <section class="page" id="page-interview">
+        <div class="sub-head">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h13a2 2 0 012 2z"/></svg></div>
+          <div><h1>模拟面试</h1><p>AI 面试官多轮追问 · 实时反馈 · 自动沉淀错题</p></div>
+        </div>
+        <div class="tabs"><div class="tab active">开始新面试</div><div class="tab">历史记录 (5)</div></div>
+        <div class="grid2" style="margin-bottom:16px">
+          <div class="card" style="cursor:pointer"><h3 style="color:var(--text)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg>技术面</h3><p class="muted" style="font-size:13px;margin-top:8px;line-height:1.6">算法、系统设计、语言底层等硬核技术问答，6 轮深入追问。</p><button class="btn btn-ghost" style="margin-top:16px">开始 →</button></div>
+          <div class="card" style="cursor:pointer"><h3 style="color:var(--text)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>行为面 / HR 面</h3><p class="muted" style="font-size:13px;margin-top:8px;line-height:1.6">STAR 法则、职业规划、团队协作等软技能考察。</p><button class="btn btn-ghost" style="margin-top:16px">开始 →</button></div>
+        </div>
+        <div class="card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>历史面试</h3>
+          <div style="margin-top:14px">
+            <div class="list-row"><span class="badge b-indigo">技术面</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">后端工程师 · 6 轮</div><div class="faint" style="font-size:12px;margin-top:2px">2 小时前 · 已完成</div></div><span style="font-size:20px;font-weight:700;color:var(--emerald)">82</span></div>
+            <div class="list-row"><span class="badge b-indigo">行为面</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">通用软技能 · 5 轮</div><div class="faint" style="font-size:12px;margin-top:2px">昨天 · 已完成</div></div><span style="font-size:20px;font-weight:700;color:var(--amber)">76</span></div>
+            <div class="list-row"><span class="badge b-slate">进行中</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">系统设计 · 3 / 6 轮</div><div class="faint" style="font-size:12px;margin-top:2px">3 天前 · 未完成</div></div><span style="font-size:14px;color:var(--faint)">继续 →</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ DEEPDIVE ============ -->
+      <section class="page" id="page-deepdive">
+        <div class="sub-head">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/></svg></div>
+          <div><h1>项目深挖</h1><p>针对简历项目深度追问 · 生成能力图谱</p></div>
+        </div>
+        <div class="grid3" style="margin-bottom:16px">
+          <div class="stat-lg"><div class="l">已深挖项目</div><div class="v">3<small> 个</small></div></div>
+          <div class="stat-lg"><div class="l">平均评分</div><div class="v">41<small> / 50</small></div></div>
+          <div class="stat-lg"><div class="l">生成图谱节点</div><div class="v">28</div></div>
+        </div>
+        <div class="card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/></svg>我的项目</h3>
+          <div style="margin-top:14px">
+            <div class="list-row"><div class="tl-dot" style="color:var(--accent-2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/></svg></div><div style="flex:1"><div style="font-size:13.5px;font-weight:550">高并发秒杀系统</div><div class="faint" style="font-size:12px;margin-top:2px">4 轮追问 · Redis / 消息队列 / 限流</div></div><span class="badge b-green">41 / 50</span></div>
+            <div class="list-row"><div class="tl-dot" style="color:var(--accent-2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/></svg></div><div style="flex:1"><div style="font-size:13.5px;font-weight:550">分布式日志采集平台</div><div class="faint" style="font-size:12px;margin-top:2px">3 轮追问 · Kafka / ELK</div></div><span class="badge b-amber">38 / 50</span></div>
+            <div class="list-row"><span class="badge b-indigo">+ 新建</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550" class="muted">从简历中选择项目开始深挖</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ KNOWLEDGE ============ -->
+      <section class="page" id="page-knowledge">
+        <div class="sub-head">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M20 20V7"/></svg></div>
+          <div><h1>知识库</h1><p>面试沉淀 · 记忆曲线复习 · 掌握度追踪</p></div>
+        </div>
+        <div class="tabs"><div class="tab active">全部知识 (50)</div><div class="tab">今日复习 (7)</div><div class="tab">按来源</div></div>
+        <div class="grid3" style="margin-bottom:16px">
+          <div class="stat-lg"><div class="l">总条目</div><div class="v">50</div></div>
+          <div class="stat-lg"><div class="l">已掌握</div><div class="v" style="color:var(--emerald)">32</div></div>
+          <div class="stat-lg"><div class="l">今日待复习</div><div class="v" style="color:var(--amber)">7</div></div>
+        </div>
+        <div class="card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13"/></svg>今日复习队列</h3>
+          <div style="margin-top:14px">
+            <div class="list-row"><span class="badge b-indigo">面试</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">MySQL 索引失效的常见场景</div><div style="margin-top:6px;display:flex;gap:3px">◉◉◉○○</div></div><button class="btn btn-ghost" style="padding:7px 14px;font-size:12px">复习</button></div>
+            <div class="list-row"><span class="badge b-violet">深挖</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">Redis 缓存击穿与雪崩的区别</div><div style="margin-top:6px;display:flex;gap:3px">◉◉○○○</div></div><button class="btn btn-ghost" style="padding:7px 14px;font-size:12px">复习</button></div>
+            <div class="list-row"><span class="badge b-indigo">面试</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">HTTP/2 与 HTTP/1.1 核心差异</div><div style="margin-top:6px;display:flex;gap:3px">◉◉◉◉○</div></div><button class="btn btn-ghost" style="padding:7px 14px;font-size:12px">复习</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ERRORBOOK ============ -->
+      <section class="page" id="page-errorbook">
+        <div class="sub-head">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></div>
+          <div><h1>错题本</h1><p>反复重练 · 彻底攻克 · 生成洞察</p></div>
+        </div>
+        <div class="tabs"><div class="tab active">待攻克 (3)</div><div class="tab">已攻克 (2)</div><div class="tab">洞察</div></div>
+        <div class="card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>待攻克题目</h3>
+          <div style="margin-top:14px">
+            <div class="list-row"><span class="badge b-rose">×2 错</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">谈谈线程池的核心参数与拒绝策略</div><div class="faint" style="font-size:12px;margin-top:2px">来源：技术面 · 并发</div></div><button class="btn btn-primary" style="padding:7px 14px;font-size:12px">重练</button></div>
+            <div class="list-row"><span class="badge b-rose">×1 错</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">分布式事务的解决方案有哪些</div><div class="faint" style="font-size:12px;margin-top:2px">来源：项目深挖 · 分布式</div></div><button class="btn btn-primary" style="padding:7px 14px;font-size:12px">重练</button></div>
+            <div class="list-row"><span class="badge b-rose">×3 错</span><div style="flex:1"><div style="font-size:13.5px;font-weight:550">动态规划：最长回文子串的推导</div><div class="faint" style="font-size:12px;margin-top:2px">来源：算法学习 · DP</div></div><button class="btn btn-primary" style="padding:7px 14px;font-size:12px">重练</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ LEETCODE ============ -->
+      <section class="page" id="page-leetcode">
+        <div class="sub-head">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg></div>
+          <div><h1>算法学习 · Hot100</h1><p>分主题闯关 · AI 引导讲解 · 进度追踪</p></div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="muted" style="font-size:13px">已掌握 52 / 100</span><span style="font-size:14px;font-weight:700">52%</span></div>
+          <div class="m-bar" style="margin-top:10px;height:8px"><i style="width:52%;background:linear-gradient(90deg,#eeb0b8,#d0808c)"></i></div>
+        </div>
+        <div class="tabs"><div class="tab active">全部</div><div class="tab">简单</div><div class="tab">中等</div><div class="tab">困难</div></div>
+        <div class="grid2">
+          <div class="card"><h3 style="font-size:14px">哈希表 <span class="faint" style="font-weight:400;font-size:12px">8 / 10</span></h3>
+            <div style="margin-top:12px">
+              <div class="list-row" style="padding:10px 14px"><span class="badge b-slate">简单</span><div style="flex:1;font-size:13px">两数之和</div><span class="badge b-green">已掌握</span></div>
+              <div class="list-row" style="padding:10px 14px"><span class="badge b-amber">中等</span><div style="flex:1;font-size:13px">字母异位词分组</div><span class="badge b-amber">学习中</span></div>
+              <div class="list-row" style="padding:10px 14px"><span class="badge b-amber">中等</span><div style="flex:1;font-size:13px">最长连续序列</div><span class="badge b-slate">未学</span></div>
+            </div>
+          </div>
+          <div class="card"><h3 style="font-size:14px">双指针 <span class="faint" style="font-weight:400;font-size:12px">5 / 8</span></h3>
+            <div style="margin-top:12px">
+              <div class="list-row" style="padding:10px 14px"><span class="badge b-slate">简单</span><div style="flex:1;font-size:13px">移动零</div><span class="badge b-green">已掌握</span></div>
+              <div class="list-row" style="padding:10px 14px"><span class="badge b-amber">中等</span><div style="flex:1;font-size:13px">盛最多水的容器</div><span class="badge b-green">已掌握</span></div>
+              <div class="list-row" style="padding:10px 14px"><span class="badge b-rose">困难</span><div style="flex:1;font-size:13px">接雨水</div><span class="badge b-slate">未学</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+const TITLES={home:'工作台',resume:'简历大师',interview:'模拟面试',deepdive:'项目深挖',knowledge:'知识库',errorbook:'错题本',leetcode:'算法学习'};
+function go(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
+  const el=document.getElementById('page-'+id); if(el)el.classList.add('show');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===id));
+  document.getElementById('crumb').innerHTML='工作台 <span style="color:var(--faint)">/</span> <b>'+TITLES[id]+'</b>';
+  if(id==='home')document.getElementById('crumb').innerHTML='<b>工作台</b>';
+  document.querySelector('.main').scrollTo({top:0,behavior:'smooth'});
+  if(id==='home')animateRing();
+}
+document.querySelectorAll('[data-nav]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.nav)));
+// tab toggle within a page
+document.querySelectorAll('.tabs').forEach(g=>g.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{g.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active')})));
+// ring animation
+function animateRing(){
+  const val=68, arc=document.getElementById('ring-arc'), num=document.getElementById('ring-num'), C=377;
+  arc.style.strokeDashoffset=C; num.textContent='0';
+  requestAnimationFrame(()=>{arc.style.strokeDashoffset=C*(1-val/100);});
+  const t0=performance.now();
+  (function tick(t){const p=Math.min(1,(t-t0)/1300);const e=1-Math.pow(1-p,3);num.innerHTML=Math.round(val*e)+'<small>%</small>';if(p<1)requestAnimationFrame(tick);})(t0);
+}
+animateRing();
+</script>
+</body>
+</html>
