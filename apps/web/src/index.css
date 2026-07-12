@@ -1,50 +1,99 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── Design tokens ──────────────────────────────────────────────
-   Professional SaaS, dark-first. Slate neutrals + indigo accent.
-   Light/dark pairs designed together; all text pairs >= 4.5:1.    */
 :root {
   --bg: 250 250 252;
+  --bg-2: 244 246 251;
   --surface: 255 255 255;
   --surface-2: 248 250 252;
   --border: 226 232 240;
+  --border-strong: 203 213 225;
   --text: 15 23 42;
   --text-muted: 100 116 139;
   --text-faint: 148 163 184;
-  --accent: 79 70 229;
-  --accent-hover: 67 56 202;
-  --accent-soft: 238 242 255;
-  --success: 5 150 105;
+  --accent: 194 160 95;
+  --accent-hover: 217 184 119;
+  --accent-soft: 245 236 214;
+  --success: 16 185 129;
   --danger: 220 38 38;
   --warn: 217 119 6;
-  --ring: 99 102 241;
+  --ring: 217 184 119;
 }
 .dark {
-  --bg: 9 11 18;
-  --surface: 17 21 31;
-  --surface-2: 24 29 41;
+  --bg: 10 14 26;
+  --bg-2: 7 10 18;
+  --surface: 18 24 38;
+  --surface-2: 24 31 48;
   --border: 38 45 60;
-  --text: 226 232 240;
-  --text-muted: 148 163 184;
-  --text-faint: 100 116 139;
-  --accent: 129 140 248;
-  --accent-hover: 165 180 252;
-  --accent-soft: 30 31 56;
-  --success: 52 211 153;
-  --danger: 248 113 113;
-  --warn: 251 191 36;
-  --ring: 129 140 248;
+  --border-strong: 55 65 85;
+  --text: 238 241 247;
+  --text-muted: 152 160 179;
+  --text-faint: 95 104 128;
+  --accent: 217 184 119;
+  --accent-hover: 232 207 154;
+  --accent-soft: 42 36 24;
+  --success: 126 207 160;
+  --danger: 226 154 164;
+  --warn: 227 193 105;
+  --ring: 217 184 119;
 }
 
-html { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+html {
+  font-family: 'Space Grotesk', 'PingFang SC', 'Helvetica Neue', system-ui, sans-serif;
+}
 body { background: rgb(var(--bg)); color: rgb(var(--text)); }
+.font-mono-data {
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
 
-* { transition: background-color .2s ease, border-color .2s ease, color .15s ease; }
+.ops-atmosphere {
+  background:
+    radial-gradient(1000px 560px at 12% -10%, rgba(40, 58, 110, 0.45), transparent 60%),
+    radial-gradient(820px 560px at 100% 0%, rgba(217, 184, 119, 0.08), transparent 55%),
+    rgb(var(--bg));
+}
+.ops-atmosphere::before {
+  content: '';
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  opacity: 0.4;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,0.5), transparent 70%);
+  z-index: 0;
+}
+
+.hub-tile {
+  transform-origin: center;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.22s ease, box-shadow 0.28s ease, background 0.22s ease, opacity 0.22s ease;
+}
+.hub-tile:hover,
+.hub-tile:focus-visible {
+  transform: scale(1.08);
+  z-index: 3;
+}
+.hub-grid:has(.hub-tile:hover) .hub-tile:not(:hover),
+.hub-grid:has(.hub-tile:focus-visible) .hub-tile:not(:focus-visible) {
+  opacity: 0.55;
+}
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
+  .hub-tile { transition: border-color 0.15s ease, background 0.15s ease; }
+  .hub-tile:hover,
+  .hub-tile:focus-visible { transform: none; }
+}
+
+/* 主题切换过渡:仅作用于承载主题色的元素,避免全局通配符的性能与不可控问题 */
+body, [class*="bg-"], [class*="border-"], [class*="text-"] {
+  transition: background-color .2s ease, border-color .2s ease, color .15s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  body, [class*="bg-"], [class*="border-"], [class*="text-"] {
+    transition: none;
+  }
 }
 
 @keyframes shimmer { 100% { transform: translateX(100%); } }
@@ -55,3 +104,8 @@ body { background: rgb(var(--bg)); color: rgb(var(--text)); }
   animation: shimmer 1.4s infinite;
 }
 @media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; } }
+
+/* Bento 卡片 stagger 入场:淡入 + 上浮 */
+@keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.fade-up { animation: fade-up .5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .fade-up { animation: none; } }
