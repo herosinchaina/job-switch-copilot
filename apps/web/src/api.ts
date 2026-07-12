@@ -75,4 +75,12 @@ export const api = {
   errorBookStats: () => j<{ total:number; pending:number; conquered:number; bySource:{source:string;count:number}[]; byTag:{tag:string;count:number}[]; conqueredLast7Days:number }>('/api/error-book/stats'),
   listAttempts: (id:number) => j<KnowledgeAttempt[]>(`/api/error-book/items/${id}/attempts`),
   submitAttempt: (id:number, answer:string) => j<{ feedback:KnowledgeAttemptFeedback; conquered:boolean; attempt:KnowledgeAttempt }>(`/api/error-book/items/${id}/attempt`, json({ answer })),
+  dashboard: () => j<{
+    resume: { hasData:boolean; hrScore:number|null; interviewerScore:number|null }
+    algorithm: { total:number; mastered:number; learning:number }
+    knowledge: { total:number; due:number; mastered:number }
+    interview: { count:number; avgScore:number|null }
+    deepdive: { count:number; avgScore:number|null }
+    errorbook: { total:number; pending:number; conquered:number }
+  }>('/api/dashboard'),
 }
