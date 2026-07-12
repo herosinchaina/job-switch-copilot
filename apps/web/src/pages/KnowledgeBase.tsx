@@ -26,7 +26,7 @@ export function KnowledgeBase() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <div className="flex items-center gap-2">
-        <BookMarked size={20} className="text-accent" />
+        <BookMarked size={20} className="shrink-0 text-accent" />
         <h1 className="text-xl font-semibold tracking-tight">知识库</h1>
       </div>
       <div className="flex gap-1">
@@ -105,11 +105,11 @@ function Library() {
           <option value="">全部掌握度</option>
           {[0, 1, 2, 3, 4, 5].map(m => <option key={m} value={m}>{m}</option>)}
         </select>
-        <Button variant="primary" onClick={() => setEditing('new')}><Plus size={15} /> 新增条目</Button>
+        <Button variant="primary" onClick={() => setEditing('new')}><Plus size={15} className="shrink-0" /> 新增条目</Button>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="animate-spin" /> 加载中…</div>
+        <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="shrink-0 animate-spin" /> 加载中…</div>
       ) : items.length === 0 ? (
         <Card className="p-6 text-sm text-muted">
           还没有知识条目。去「模拟面试」或「项目深挖」做几轮,答得不好的题会自动可导入这里,或点「新增条目」手写一条。
@@ -194,7 +194,7 @@ function ItemForm({ item, onCancel, onSaved }: { item: KnowledgeItem | null; onC
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel} disabled={busy}>取消</Button>
-        <Button variant="primary" onClick={save} disabled={busy}>{busy ? <Loader2 size={15} className="animate-spin" /> : null} 保存</Button>
+        <Button variant="primary" onClick={save} disabled={busy}>{busy ? <Loader2 size={15} className="shrink-0 animate-spin" /> : null} 保存</Button>
       </div>
     </Card>
   )
@@ -221,7 +221,7 @@ function Review() {
     } finally { setBusy(false) }
   }
 
-  if (due === null) return <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="animate-spin" /> 加载中…</div>
+  if (due === null) return <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="shrink-0 animate-spin" /> 加载中…</div>
   if (due.length === 0) return <Card className="p-6 text-center text-sm text-muted">今天没有需要复习的条目 🎉</Card>
   if (idx >= due.length) return <Card className="p-6 text-center text-sm text-muted">本次复习了 {reviewed} 张 🎉</Card>
 

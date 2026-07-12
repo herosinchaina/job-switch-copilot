@@ -48,13 +48,13 @@ export function LcGuide({ leetcodeId, onBack }: { leetcodeId: number; onBack: ()
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={15} /> 返回题库</button>
+      <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={15} className="shrink-0" /> 返回题库</button>
       {problem && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-border bg-surface p-4">
           <div>
             <span className="text-sm font-semibold text-text">{problem.title}</span>
             <span className="ml-2 text-xs text-faint">{problem.topic}</span>
-            <a href={problem.url} target="_blank" rel="noreferrer" className="ml-3 inline-flex items-center gap-1 text-xs text-accent hover:underline">去 LeetCode 做题 <ExternalLink size={12} /></a>
+            <a href={problem.url} target="_blank" rel="noreferrer" className="ml-3 inline-flex items-center gap-1 text-xs text-accent hover:underline">去 LeetCode 做题 <ExternalLink size={12} className="shrink-0" /></a>
           </div>
           <div className="flex items-center gap-1">
             {(['learning','mastered'] as const).map(s => (

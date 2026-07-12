@@ -96,7 +96,7 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
 
   const Back = () => (
     <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text">
-      <ChevronLeft size={15} /> 返回
+      <ChevronLeft size={15} className="shrink-0" /> 返回
     </button>
   )
 
@@ -121,7 +121,7 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end">
-            <Button variant="primary" onClick={start} disabled={busy}>{busy ? <Loader2 size={15} className="animate-spin" /> : null} 开始面试</Button>
+            <Button variant="primary" onClick={start} disabled={busy}>{busy ? <Loader2 size={15} className="shrink-0 animate-spin" /> : null} 开始面试</Button>
           </div>
         </Card>
 
@@ -153,7 +153,7 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
     return (
       <div className="mx-auto max-w-2xl space-y-5">
         <button onClick={() => isReview ? setPhase('config') : onBack()} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text">
-          <ChevronLeft size={15} /> 返回
+          <ChevronLeft size={15} className="shrink-0" /> 返回
         </button>
         <h1 className="text-xl font-semibold tracking-tight">{isReview ? '面试回看' : '面试报告'}</h1>
 
@@ -194,7 +194,7 @@ export function MockInterview({ versionId, onBack }: { versionId: number; onBack
           {sessionId != null && (
             <div className="flex flex-wrap items-center gap-3">
               <Button variant="secondary" onClick={doImport} disabled={importing}>
-                {importing ? <Loader2 size={15} className="animate-spin" /> : null} 存入知识库
+                {importing ? <Loader2 size={15} className="shrink-0 animate-spin" /> : null} 存入知识库
               </Button>
               {importMsg && <p className="text-sm text-muted">{importMsg}</p>}
             </div>
