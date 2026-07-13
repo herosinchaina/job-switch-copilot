@@ -8,6 +8,8 @@ const json = (body: unknown): RequestInit => ({ method:'POST', headers:{'content
 export const api = {
   health: () => j<{cli:{ok:boolean;detail:string}}>('/api/health'),
   listResumes: () => j<{id:number;title:string;createdAt:string}[]>('/api/resumes'),
+  getVersion: (id: number) => j<{id:number;resumeId:number;kind:string;status:'draft'|'confirmed';structured:StructuredResume}>(`/api/resumes/versions/${id}`),
+  activeResume: () => j<{id:number;resumeId:number;kind:string;status:'draft'|'confirmed';structured:StructuredResume} | null>('/api/resumes/active'),
   uploadResume: (file: File) => { const fd = new FormData(); fd.append('file', file)
     return j<{resumeId:number;versionId:number;structured:StructuredResume}>('/api/resumes', { method:'POST', body: fd }) },
   updateVersion: (id: number, structured: StructuredResume) =>

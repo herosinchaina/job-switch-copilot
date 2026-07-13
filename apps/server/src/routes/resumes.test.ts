@@ -28,6 +28,35 @@ describe('resume routes', () => {
     const res = await request(app).post('/api/optimize').send({ versionId: up.body.versionId })
     expect(res.status).toBe(409) // not confirmed
   })
+  it('active resume is null before any confirm', async () => {
+    const res = await request(app).get('/api/resumes/active')
+    expect(res.status).toBe(200)
+    expect(res.body).toBeNull()
+  })
+  it('confirm marks the version as active resume (persists across reload)', async () => {
+    const up = await request(app).post('/api/resumes').attach('file', Buffer.from('# r'), 'r.md')
+    await request(app).post(`/api/resumes/versions/${up.body.versionId}/confirm`)
+    const active = await request(app).get('/api/resumes/active')
+    expect(active.body.id).toBe(up.body.versionId)
+    expect(active.body.status).toBe('confirmed')
+    expect(active.body.structured.basics.name).toBe('A')
+  })
+  it('confirming a newer resume overrides the active one', async () => {
+    const up1 = await request(app).post('/api/resumes').attach('file', Buffer.from('# r1'), 'r1.md')
+    await request(app).post(`/api/resumes/versions/${up1.body.versionId}/confirm`)
+    const up2 = await request(app).post('/api/resumes').attach('file', Buffer.from('# r2'), 'r2.md')
+    await request(app).post(`/api/resumes/versions/${up2.body.versionId}/confirm`)
+    const active = await request(app).get('/api/resumes/active')
+    expect(active.body.id).toBe(up2.body.versionId)
+  })
+  it('GET version by id returns structured resume', async () => {
+    const up = await request(app).post('/api/resumes').attach('file', Buffer.from('# r'), 'r.md')
+    const res = await request(app).get(`/api/resumes/versions/${up.body.versionId}`)
+    expect(res.status).toBe(200)
+    expect(res.body.structured.basics.name).toBe('A')
+    const missing = await request(app).get('/api/resumes/versions/9999')
+    expect(missing.status).toBe(404)
+  })
 })
 
 function smartAi(): AiProvider {

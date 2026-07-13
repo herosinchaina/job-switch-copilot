@@ -65,18 +65,17 @@ function Hero({ value, s, onNavigate }: { value: number; s: Stats; onNavigate?: 
   const dash = C * (1 - (value * p) / 100)
   const done = [s.resume.hasData, s.algorithm.mastered > 0, s.knowledge.total > 0, s.interview.count > 0, s.deepdive.count > 0, s.errorbook.total > 0].filter(Boolean).length
   return (
-    <section className="fade-up relative overflow-hidden rounded-hero border border-border-strong p-11 shadow-lift"
-      style={{ background: 'linear-gradient(150deg, rgba(28,40,78,.75), rgba(14,19,36,.7) 65%, rgba(20,17,10,.6))' }}>
+    <section className="fade-up relative overflow-hidden rounded-hero border border-border-strong bg-gradient-to-br from-indigo-50 via-white to-amber-50/60 p-11 shadow-lift dark:from-[rgba(28,40,78,0.75)] dark:via-[rgba(14,19,36,0.7)] dark:to-[rgba(20,17,10,0.6)]">
       <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/45 to-transparent" aria-hidden />
-      <span className="absolute -left-[60px] -top-[120px] h-[340px] w-[340px] rounded-full blur-[26px]" style={{ background: 'radial-gradient(circle, rgba(60,90,180,.4), transparent 65%)' }} aria-hidden />
-      <span className="absolute -bottom-[140px] -right-[40px] h-[340px] w-[340px] rounded-full blur-[26px]" style={{ background: 'radial-gradient(circle, rgba(217,184,119,.16), transparent 65%)' }} aria-hidden />
+      <span className="absolute -left-[60px] -top-[120px] h-[340px] w-[340px] rounded-full blur-[26px]" style={{ background: 'radial-gradient(circle, rgba(60,90,180,.22), transparent 65%)' }} aria-hidden />
+      <span className="absolute -bottom-[140px] -right-[40px] h-[340px] w-[340px] rounded-full blur-[26px]" style={{ background: 'radial-gradient(circle, rgba(217,184,119,.2), transparent 65%)' }} aria-hidden />
 
       <div className="relative grid items-center gap-8 md:grid-cols-[1fr_auto]">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-pill border border-accent/20 bg-accent/10 px-3.5 py-1.5 text-xs font-medium text-accent-hover">
-            <Sparkles size={14} /> Offer Readiness · 实时评估
+          <span className="inline-flex items-center gap-1.5 rounded-pill border border-accent/25 bg-accent/10 px-3.5 py-1.5 text-xs font-medium text-accent-hover">
+            <Sparkles size={14} className="shrink-0" /> Offer Readiness · 实时评估
           </span>
-          <h1 className="mt-5 text-[42px] font-semibold leading-[1.08] tracking-[-.03em] text-white">
+          <h1 className="mt-5 text-[42px] font-semibold leading-[1.08] tracking-[-.03em] text-text">
             综合准备度<br />
             <span className="bg-gradient-to-r from-accent-hover to-accent bg-clip-text text-transparent">离目标 Offer 更近一步</span>
           </h1>
@@ -89,7 +88,7 @@ function Hero({ value, s, onNavigate }: { value: number; s: Stats; onNavigate?: 
               <Play size={16} className="shrink-0" /> 继续训练
             </button>
             <button onClick={() => onNavigate?.('resume')}
-              className="inline-flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-pill border border-border bg-white/[0.08] px-6 py-3 text-sm font-medium text-text transition-colors hover:bg-white/[0.13]">
+              className="inline-flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-pill border border-border bg-surface/70 px-6 py-3 text-sm font-medium text-text transition-colors hover:bg-surface-2 dark:bg-white/[0.08] dark:hover:bg-white/[0.13]">
               <Plus size={16} className="shrink-0" /> 诊断简历
             </button>
           </div>
@@ -103,12 +102,12 @@ function Hero({ value, s, onNavigate }: { value: number; s: Stats; onNavigate?: 
                 <stop offset="100%" stopColor="#c2a05f" />
               </linearGradient>
             </defs>
-            <circle cx="70" cy="70" r={R} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="10" />
+            <circle cx="70" cy="70" r={R} fill="none" stroke="rgb(var(--border-strong))" strokeWidth="10" />
             <circle cx="70" cy="70" r={R} fill="none" stroke="url(#rg)" strokeWidth="10" strokeLinecap="round"
               strokeDasharray={C} strokeDashoffset={dash} />
           </svg>
           <div className="absolute text-center">
-            <div className="text-[56px] font-semibold leading-none tracking-[-.04em] tabular-nums text-white">{shown}<small className="text-[22px] font-medium text-faint">%</small></div>
+            <div className="text-[56px] font-semibold leading-none tracking-[-.04em] tabular-nums text-text">{shown}<small className="text-[22px] font-medium text-faint">%</small></div>
             <div className="mt-2 text-[13px] text-muted">综合准备度</div>
           </div>
         </div>

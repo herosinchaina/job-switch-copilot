@@ -114,4 +114,11 @@ export function migrate(db: DatabaseSync): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now')));
     CREATE INDEX IF NOT EXISTS ix_ka_item ON knowledge_attempts(item_id);
   `)
+  // 应用级键值设置(存"当前活跃简历版本"等单例状态)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+  `)
 }
