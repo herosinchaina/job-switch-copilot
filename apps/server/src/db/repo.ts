@@ -23,6 +23,23 @@ export function getVersion(db: DatabaseSync, versionId: number) {
   return { id: row.id, resumeId: row.resume_id, kind: row.kind, status: row.status,
     structured: StructuredResumeSchema.parse(JSON.parse(row.structured_json)) }
 }
+// ── 应用级设置(当前活跃简历版本等单例状态)──────────────
+export function getSetting(db: DatabaseSync, key: string): string | null {
+  const row = db.prepare('SELECT value FROM app_settings WHERE key=?').get(key) as any
+  return row ? (row.value as string) : null
+}
+export function setSetting(db: DatabaseSync, key: string, value: string): void {
+  db.prepare(`INSERT INTO app_settings (key,value,updated_at) VALUES (?,?,datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`).run(key, value)
+}
+// 当前活跃简历版本:返回该版本(不存在或已删则 null,并顺带清除失效标记)
+export function getActiveVersion(db: DatabaseSync) {
+  const v = getSetting(db, 'active_version_id')
+  if (!v) return null
+  const version = getVersion(db, Number(v))
+  if (!version) { db.prepare("DELETE FROM app_settings WHERE key='active_version_id'").run(); return null }
+  return version
+}
 export function createReview(db: DatabaseSync, versionId: number, rv: Review,
   opts?: { jobDescriptionId?: number | null; gap?: GapAnalysis | null }): number {
   return Number(db.prepare(

@@ -3,7 +3,7 @@ import multer from 'multer'
 import type { DatabaseSync } from 'node:sqlite'
 import type { AiProvider } from '../ai/provider'
 import { extractText, parseResume } from '../services/parse'
-import { createResume, createVersion, confirmVersion, getVersion, listResumes } from '../db/repo'
+import { createResume, createVersion, confirmVersion, getVersion, listResumes, getActiveVersion, setSetting } from '../db/repo'
 import { StructuredResumeSchema } from '@aios/shared'
 import { HttpError } from '../middleware/error'
 
@@ -13,6 +13,18 @@ const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } })
 export function resumesRouter(db: DatabaseSync, ai: AiProvider) {
   const r = Router()
   r.get('/resumes', (_req, res) => res.json(listResumes(db)))
+  // 当前活跃简历(确认版):刷新/换设备后据此恢复。无则 null。
+  r.get('/resumes/active', (_req, res) => {
+    const v = getActiveVersion(db)
+    res.json(v ? { id: v.id, resumeId: v.resumeId, kind: v.kind, status: v.status, structured: v.structured } : null)
+  })
+  r.get('/resumes/versions/:id', (req, res, next) => {
+    try {
+      const v = getVersion(db, Number(req.params.id))
+      if (!v) throw new HttpError(404, '版本不存在')
+      res.json({ id: v.id, resumeId: v.resumeId, kind: v.kind, status: v.status, structured: v.structured })
+    } catch (e) { next(e) }
+  })
   r.post('/resumes', upload.single('file'), async (req, res, next) => {
     try {
       if (!req.file) throw new HttpError(400, '缺少文件')
@@ -41,7 +53,10 @@ export function resumesRouter(db: DatabaseSync, ai: AiProvider) {
     try {
       const v = getVersion(db, Number(req.params.id))
       if (!v) throw new HttpError(404, '版本不存在')
-      confirmVersion(db, v.id); res.json({ ok: true })
+      confirmVersion(db, v.id)
+      // 标记为当前活跃简历(新简历确认即覆盖旧的)
+      setSetting(db, 'active_version_id', String(v.id))
+      res.json({ ok: true })
     } catch (e) { next(e) }
   })
   return r

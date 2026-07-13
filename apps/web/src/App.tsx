@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTheme } from './theme'
+import { api } from './api'
 import { CliBanner } from './components/CliBanner'
 import { Sidebar, type NavId } from './components/Sidebar'
 import { ResumeUpload } from './pages/ResumeUpload'
@@ -29,6 +30,13 @@ export default function App() {
   const [optimizeSuggestions, setOptimizeSuggestions] = useState<Review['suggestions'] | null>(null)
   const [kitFor, setKitFor] = useState<{ versionId: number; jdId: number | null } | null>(null)
   const [guideFor, setGuideFor] = useState<number | null>(null)
+
+  // 启动时从后端拉"当前活跃简历"(确认版跨刷新/换设备持久化;新简历确认即覆盖)
+  useEffect(() => {
+    api.activeResume()
+      .then(v => { if (v) { setConfirmedVersion(v.id); setConfirmedStructured(v.structured) } })
+      .catch(() => {})
+  }, [])
 
   function resetFlow() {
     setConfirmedVersion(null)
