@@ -7,7 +7,7 @@ import { seedProblems, listProblems, getProblem, setProgress, progressSummary,
   createGuideSession, getGuideSession, finishGuideSession, createGuideTurn, answerGuideTurn, listGuideTurns } from './repo'
 import { createKnowledgeItem, importWeakItem, getKnowledgeItem, updateKnowledgeItem,
   deleteKnowledgeItem, listKnowledgeItems, listDueItems, reviewKnowledgeItem, listAllTags } from './repo'
-import { createAttempt, listAttempts, listBookItems, bookStats } from './repo'
+import { createAttempt, listAttempts, listBookItems, bookStats, dashboardStats } from './repo'
 
 let db: DatabaseSync
 beforeEach(() => { db = openDb(':memory:') })
@@ -295,5 +295,46 @@ describe('error-book repo', () => {
     // i1 已攻克,其 rag 标签不再计入薄弱;剩 d1(rag) 与 i2(sql)
     expect(s.byTag.find(x => x.tag === 'rag')!.count).toBe(1)
     expect(s.byTag.find(x => x.tag === 'sql')!.count).toBe(1)
+  })
+})
+
+describe('dashboardStats', () => {
+  it('reports empty state when nothing exists', () => {
+    const db = openDb(':memory:')
+    const s = dashboardStats(db)
+    expect(s.resume.hasData).toBe(false)
+    expect(s.resume.hrScore).toBeNull()
+    expect(s.algorithm.total).toBe(0)   // openDb 不自动 seed 题库(createApp 才 seed)
+    expect(s.algorithm.mastered).toBe(0)
+    expect(s.knowledge.total).toBe(0)
+    expect(s.interview.count).toBe(0)
+    expect(s.interview.avgScore).toBeNull()
+    expect(s.deepdive.avgScore).toBeNull()
+    expect(s.errorbook.total).toBe(0)
+  })
+  it('aggregates resume review scores (latest per perspective)', () => {
+    const db = openDb(':memory:')
+    const rid = createResume(db, { title:'r', sourceFormat:'md', rawText:'x' })
+    const vid = createVersion(db, { resumeId:rid, kind:'original', parentVersionId:null, structured:sample, status:'confirmed' })
+    createReview(db, vid, { perspective:'hr', overallScore:70, dimensionScores:[], suggestions:[] })
+    createReview(db, vid, { perspective:'hr', overallScore:85, dimensionScores:[], suggestions:[] })  // 更新的一条
+    createReview(db, vid, { perspective:'interviewer', overallScore:66, dimensionScores:[], suggestions:[] })
+    const s = dashboardStats(db)
+    expect(s.resume.hasData).toBe(true)
+    expect(s.resume.hrScore).toBe(85)              // 取最新
+    expect(s.resume.interviewerScore).toBe(66)
+  })
+  it('aggregates finished interview average score', () => {
+    const db = openDb(':memory:')
+    const rid = createResume(db, { title:'r', sourceFormat:'md', rawText:'x' })
+    const vid = createVersion(db, { resumeId:rid, kind:'original', parentVersionId:null, structured:sample, status:'confirmed' })
+    const report = { overallScore:0, dimensions:[], bestTurn:null, worstTurn:null, weaknesses:[], nextSteps:[] } as any
+    const s1 = createSession(db, { resumeVersionId:vid, jobDescriptionId:null, cliSessionId:null, role:'后端', roundType:'tech', maxRounds:6 })
+    finishSession(db, s1, { ...report, overallScore:80 })
+    const s2 = createSession(db, { resumeVersionId:vid, jobDescriptionId:null, cliSessionId:null, role:'后端', roundType:'tech', maxRounds:6 })
+    finishSession(db, s2, { ...report, overallScore:60 })
+    const s = dashboardStats(db)
+    expect(s.interview.count).toBe(2)
+    expect(s.interview.avgScore).toBe(70)
   })
 })

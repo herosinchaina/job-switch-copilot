@@ -14,7 +14,7 @@ export function ErrorBook() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <div className="flex items-center gap-2">
-        <Target size={20} className="text-accent" />
+        <Target size={20} className="shrink-0 text-accent" />
         <h1 className="text-xl font-semibold tracking-tight">错题本</h1>
       </div>
       <div className="flex gap-1">
@@ -42,7 +42,7 @@ function List({ status }: { status: 'pending' | 'conquered' }) {
   }
   useEffect(() => { load() /* eslint-disable-next-line */ }, [status])
 
-  if (items === null) return <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="animate-spin" /> 加载中…</div>
+  if (items === null) return <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="shrink-0 animate-spin" /> 加载中…</div>
   if (error) return (
     <Card className="space-y-3 p-6 text-sm">
       <p className="text-danger">加载失败:{error}</p>
@@ -109,7 +109,7 @@ function Detail({ item, onConquered }: { item: BookItem; onConquered: () => void
             <textarea aria-label="重做答案" rows={4} value={answer} onChange={e => setAnswer(e.target.value)}
               placeholder="凭现在的理解重新作答,提交后 AI 会重新评分…" className={field} /></label>
           {error && <p className="text-sm text-danger">{error}</p>}
-          <Button variant="primary" onClick={submit} disabled={busy}>{busy ? <><Loader2 size={15} className="animate-spin" /> AI 评分中(约需数十秒)…</> : '让 AI 评分'}</Button>
+          <Button variant="primary" onClick={submit} disabled={busy}>{busy ? <><Loader2 size={15} className="shrink-0 animate-spin" /> AI 评分中(约需数十秒)…</> : '让 AI 评分'}</Button>
         </>
       )}
 
@@ -123,7 +123,7 @@ function FeedbackCard({ fb }: { fb: KnowledgeAttemptFeedback }) {
   return (
     <div className="space-y-2 rounded-card border border-border bg-surface-2 p-3">
       <div className="flex items-center gap-2">
-        {fb.verdict === 'pass' ? <CheckCircle2 size={16} className="text-success" /> : <XCircle size={16} className="text-danger" />}
+        {fb.verdict === 'pass' ? <CheckCircle2 size={16} className="shrink-0 text-success" /> : <XCircle size={16} className="shrink-0 text-danger" />}
         <span className="text-sm font-medium">{fb.verdict === 'pass' ? '通过' : '未通过'} · {fb.score} 分</span>
       </div>
       <Markdown>{fb.comment}</Markdown>
@@ -140,14 +140,14 @@ function HistoryList({ attempts }: { attempts: KnowledgeAttempt[] }) {
   return (
     <div className="space-y-2">
       <button onClick={() => setOpen(o => !o)} className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-faint hover:text-muted">
-        <History size={13} /> 重做历史({attempts.length}){open ? ' ▲' : ' ▼'}
+        <History size={13} className="shrink-0" /> 重做历史({attempts.length}){open ? ' ▲' : ' ▼'}
       </button>
       {open && (
         <div className="space-y-2">
           {attempts.map(a => (
             <div key={a.id} className="rounded-card border border-border bg-surface-2 p-3">
               <div className="mb-1 flex items-center gap-2 text-xs">
-                {a.feedback.verdict === 'pass' ? <CheckCircle2 size={13} className="text-success" /> : <XCircle size={13} className="text-danger" />}
+                {a.feedback.verdict === 'pass' ? <CheckCircle2 size={13} className="shrink-0 text-success" /> : <XCircle size={13} className="shrink-0 text-danger" />}
                 <span className="font-medium text-text">{a.score} 分</span>
                 <span className="text-faint">{a.createdAt}</span>
               </div>
@@ -179,7 +179,7 @@ function Insight() {
       <Button variant="secondary" onClick={load}>重试</Button>
     </Card>
   )
-  if (!s) return <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="animate-spin" /> 加载中…</div>
+  if (!s) return <div className="flex items-center gap-2 py-8 text-sm text-muted"><Loader2 size={15} className="shrink-0 animate-spin" /> 加载中…</div>
 
   const metrics = [
     { label: '总错题', value: s.total }, { label: '待攻克', value: s.pending },

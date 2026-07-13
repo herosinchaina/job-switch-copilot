@@ -84,7 +84,7 @@ export function ResumeCompare({ baseVersionId, base, suggestions, onSaved }: {
         <Card className="border-success/30 p-5">
           <div className="mb-4 flex items-center gap-2">
             <Badge tone="accent">优化版</Badge>
-            {opt && <span className="flex items-center gap-1 text-xs text-success"><CheckCircle2 size={13} /> 已保存</span>}
+            {opt && <span className="flex items-center gap-1 text-xs text-success"><CheckCircle2 size={13} className="shrink-0" /> 已保存</span>}
           </div>
           {opt ? <ResumeBody r={opt} /> : <PaneSkeleton />}
         </Card>

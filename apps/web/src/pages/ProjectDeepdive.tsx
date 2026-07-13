@@ -64,7 +64,7 @@ export function ProjectDeepdive({ versionId, structured, onBack }: { versionId: 
   }
 
   const Back = () => (
-    <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={15} /> 返回</button>
+    <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={15} className="shrink-0" /> 返回</button>
   )
 
   if (phase === 'select') {
@@ -130,7 +130,7 @@ export function ProjectDeepdive({ versionId, structured, onBack }: { versionId: 
         {sessionId != null && (
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="secondary" onClick={doImport} disabled={importing}>
-              {importing ? <Loader2 size={15} className="animate-spin" /> : null} 存入知识库
+              {importing ? <Loader2 size={15} className="shrink-0 animate-spin" /> : null} 存入知识库
             </Button>
             {importMsg && <p className="text-sm text-muted">{importMsg}</p>}
           </div>

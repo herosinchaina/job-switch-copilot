@@ -11,7 +11,7 @@ function CopyBtn({ text }: { text: string }) {
       onClick={() => { navigator.clipboard?.writeText(text); setDone(true); setTimeout(() => setDone(false), 1500) }}
       className="flex cursor-pointer items-center gap-1 text-xs text-muted hover:text-text"
     >
-      <Copy size={13} /> {done ? '已复制' : '复制'}
+      <Copy size={13} className="shrink-0" /> {done ? '已复制' : '复制'}
     </button>
   )
 }
@@ -28,7 +28,7 @@ export function InterviewKit({ versionId, jobDescriptionId, onBack }: {
   return (
     <div className="space-y-5">
       <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text">
-        <ChevronLeft size={15} /> 返回
+        <ChevronLeft size={15} className="shrink-0" /> 返回
       </button>
       <div>
         <h1 className="text-xl font-semibold tracking-tight">面试材料</h1>

@@ -306,6 +306,46 @@ export function knowledgeStats(db: DatabaseSync) {
   return { total, due, mastered }
 }
 
+// ── Dashboard 聚合(Offer Readiness 首页真数据）──────────────
+export function dashboardStats(db: DatabaseSync) {
+  // 简历质量:最近一次诊断的 HR / 面试官双视角总分(各取最新一条）
+  const latestReview = (p: string) =>
+    (db.prepare('SELECT overall_score s FROM reviews WHERE perspective=? ORDER BY id DESC LIMIT 1').get(p) as any)?.s ?? null
+  const hrScore = latestReview('hr')
+  const interviewerScore = latestReview('interviewer')
+
+  // 算法能力:Hot100 掌握进度
+  const lc = progressSummary(db)
+
+  // 知识掌握
+  const kn = knowledgeStats(db)
+
+  // 模拟面试:已结束场次的平均总分
+  const interviewRows = db.prepare(
+    "SELECT report_json FROM interview_sessions WHERE status='finished' AND report_json IS NOT NULL"
+  ).all() as any[]
+  const interviewScores = interviewRows.map(r => InterviewReportSchema.parse(JSON.parse(r.report_json)).overallScore)
+  const interviewAvg = interviewScores.length
+    ? Math.round(interviewScores.reduce((a, b) => a + b, 0) / interviewScores.length) : null
+
+  // 项目深度:各场次平均分(每轮满分 50)再求均值
+  const deepdiveSessions = listDeepdiveSessions(db)
+  const ddScores = deepdiveSessions.map(s => s.avgScore).filter((n): n is number => n != null)
+  const deepdiveAvg = ddScores.length ? Math.round(ddScores.reduce((a, b) => a + b, 0) / ddScores.length) : null
+
+  // 错题本
+  const eb = bookStats(db)
+
+  return {
+    resume: { hasData: hrScore != null || interviewerScore != null, hrScore, interviewerScore },
+    algorithm: { total: lc.total, mastered: lc.mastered, learning: lc.learning },
+    knowledge: { total: kn.total, due: kn.due, mastered: kn.mastered },
+    interview: { count: interviewScores.length, avgScore: interviewAvg },
+    deepdive: { count: ddScores.length, avgScore: deepdiveAvg },
+    errorbook: { total: eb.total, pending: eb.pending, conquered: eb.conquered },
+  }
+}
+
 // ── 错题本(模块六) ──────────────────────────────────────────
 function rowToAttempt(r: any): KnowledgeAttempt {
   return { id: r.id, itemId: r.item_id, answer: r.answer, score: r.score,

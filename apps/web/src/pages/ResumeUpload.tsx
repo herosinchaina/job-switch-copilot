@@ -74,7 +74,7 @@ export function ResumeUpload({ onConfirmed, onDraft }: {
           </div>
           {fileName && (
             <div className="flex items-center gap-2 text-xs text-muted">
-              <FileText size={14} /> {fileName}
+              <FileText size={14} className="shrink-0" /> <span className="truncate">{fileName}</span>
             </div>
           )}
           <Card className="p-5">
@@ -82,7 +82,7 @@ export function ResumeUpload({ onConfirmed, onDraft }: {
           </Card>
           <div className="flex justify-end">
             <Button onClick={confirm} disabled={busy} variant="primary">
-              {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+              {busy ? <Loader2 size={15} className="shrink-0 animate-spin" /> : <ShieldCheck size={15} className="shrink-0" />}
               确认无误，进入诊断
             </Button>
           </div>

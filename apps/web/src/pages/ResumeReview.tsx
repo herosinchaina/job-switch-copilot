@@ -42,7 +42,7 @@ export function ResumeReview({ versionId, onBack, onOptimize, onGenerateKit }: {
     return (
       <div className="mx-auto max-w-2xl space-y-5">
         <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text">
-          <ChevronLeft size={15} /> 返回
+          <ChevronLeft size={15} className="shrink-0" /> 返回
         </button>
         <Card className="space-y-4 p-5">
           <h2 className="text-sm font-semibold text-text">简历诊断</h2>
@@ -73,7 +73,7 @@ export function ResumeReview({ versionId, onBack, onOptimize, onGenerateKit }: {
           <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <button onClick={onBack} className="flex cursor-pointer items-center gap-1 text-sm text-muted hover:text-text">
-                <ChevronLeft size={15} /> 返回
+                <ChevronLeft size={15} className="shrink-0" /> 返回
               </button>
               <div className="inline-flex rounded-btn border border-border bg-surface-2 p-0.5">
                 {(['hr', 'interviewer'] as const).map(t => (
@@ -156,7 +156,7 @@ export function ResumeReview({ versionId, onBack, onOptimize, onGenerateKit }: {
                 </Button>
               )}
               <Button variant="success" onClick={() => onOptimize(r.suggestions)}>
-                <Sparkles size={15} /> 根据建议生成优化版
+                <Sparkles size={15} className="shrink-0" /> 根据建议生成优化版
               </Button>
             </div>
           </div>
