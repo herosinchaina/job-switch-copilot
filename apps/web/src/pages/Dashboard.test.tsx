@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, fireEvent, cleanup } from '@testing-library/react'
 import { Dashboard } from './Dashboard'
 import { api } from '../api'
 
+afterEach(() => cleanup())
+
 const stats = {
-  resume: { hasData: true, hrScore: 85, interviewerScore: 66 },
+  resume: { hasData: true, hrScore: 85, interviewerScore: 65 },
   algorithm: { total: 100, mastered: 12, learning: 5 },
   knowledge: { total: 8, due: 3, mastered: 2 },
   interview: { count: 2, avgScore: 70 },
@@ -15,34 +17,32 @@ const stats = {
 
 beforeEach(() => { vi.spyOn(api, 'dashboard').mockResolvedValue(stats as any) })
 
-describe('Dashboard', () => {
-  it('renders real metrics from the API', async () => {
-    const { findAllByText, getByText } = render(<Dashboard />)
-    // 综合准备度环 + KPI + Bento 均渲染
-    expect((await findAllByText(/综合准备度/)).length).toBeGreaterThan(0)
-    expect(getByText(/简历大师/)).toBeTruthy()
-    expect(getByText(/能力雷达/)).toBeTruthy()
-    expect(getByText(/训练模块/)).toBeTruthy()
+describe('Module hub (Dashboard)', () => {
+  it('shows readiness percent and six equal module tiles', async () => {
+    const { findByText, getByText } = render(<Dashboard />)
+    expect(await findByText(/模块大厅/)).toBeTruthy()
+    expect(getByText(/准备度/)).toBeTruthy()
+    for (const name of ['简历大师', '模拟面试', '项目深挖', '知识库', '错题本', '算法学习']) {
+      expect(getByText(name)).toBeTruthy()
+    }
   })
-  it('calls onNavigate when a module card is clicked', async () => {
+  it('navigates when a tile is clicked', async () => {
     const onNavigate = vi.fn()
     const { findByText } = render(<Dashboard onNavigate={onNavigate} />)
-    fireEvent.click(await findByText(/简历大师/))
+    fireEvent.click(await findByText('简历大师'))
     expect(onNavigate).toHaveBeenCalledWith('resume')
   })
-  it('continue-training CTA navigates to interview', async () => {
+  it('keeps tiles clickable when stats fail', async () => {
+    vi.spyOn(api, 'dashboard').mockRejectedValue(new Error('boom'))
     const onNavigate = vi.fn()
-    const { findByText } = render(<Dashboard onNavigate={onNavigate} />)
-    fireEvent.click(await findByText(/继续训练/))
+    const { findByText, getByText } = render(<Dashboard onNavigate={onNavigate} />)
+    expect(await findByText(/准备度\s*—/)).toBeTruthy()
+    fireEvent.click(getByText('模拟面试'))
     expect(onNavigate).toHaveBeenCalledWith('interview')
   })
-  it('shows overall readiness summary', async () => {
-    const { findAllByText } = render(<Dashboard />)
-    expect((await findAllByText(/综合准备度/)).length).toBeGreaterThan(0)
-  })
-  it('shows error state with message on failure', async () => {
-    vi.spyOn(api, 'dashboard').mockRejectedValue(new Error('boom'))
+  it('applies hub-tile class for hover lift CSS', async () => {
     const { findByText } = render(<Dashboard />)
-    expect(await findByText(/加载失败:boom/)).toBeTruthy()
+    const tile = (await findByText('简历大师')).closest('.hub-tile')
+    expect(tile).toBeTruthy()
   })
 })
